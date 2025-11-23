@@ -3,6 +3,7 @@ package entity
 import (
 	"context"
 
+	"github.com/davidmovas/Depthborn/internal/core/attribute"
 	"github.com/davidmovas/Depthborn/internal/core/types"
 	"github.com/davidmovas/Depthborn/internal/infra"
 )
@@ -35,19 +36,19 @@ type Entity interface {
 // AttributeManager manages entity attributes (forward declaration)
 type AttributeManager interface {
 	// Get returns current attribute value
-	Get(attrType string) float64
+	Get(attrType attribute.Type) float64
 
 	// GetBase returns base attribute value
-	GetBase(attrType string) float64
+	GetBase(attrType attribute.Type) float64
 
 	// SetBase sets base attribute value
-	SetBase(attrType string, value float64)
+	SetBase(attrType attribute.Type, value float64)
 
 	// AddModifier adds attribute modifier
-	AddModifier(attrType string, modifier AttributeModifier)
+	AddModifier(attrType attribute.Type, modifier AttributeModifier)
 
 	// RemoveModifier removes attribute modifier
-	RemoveModifier(attrType string, modifierID string)
+	RemoveModifier(attrType attribute.Type, modifierID string)
 
 	// RecalculateAll recalculates all attributes
 	RecalculateAll()
