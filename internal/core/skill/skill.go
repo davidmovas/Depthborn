@@ -102,14 +102,6 @@ type Position struct {
 	Y float64
 }
 
-// Branch represents skill tree branch
-type Branch struct {
-	ID       string      `yaml:"id"`
-	Name     string      `yaml:"name"`
-	Nodes    []*NodeImpl `yaml:"nodes"`
-	Branches []*Branch   `yaml:"branches,omitempty"`
-}
-
 // Result contains skill execution results
 type Result struct {
 	Success       bool
