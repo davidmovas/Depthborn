@@ -39,7 +39,7 @@ type GenerationParams struct {
 	QuantityBonus   float64
 	DropTables      []DropTable
 	GuaranteedDrops []Drop
-	Context         map[string]interface{}
+	Context         map[string]any
 }
 
 // Drop represents single item drop

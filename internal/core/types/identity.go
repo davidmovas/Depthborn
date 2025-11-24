@@ -56,24 +56,3 @@ type TagSet interface {
 	// Clear removes all tags
 	Clear()
 }
-
-// Transform represents spatial position and orientation
-type Transform interface {
-	// Position returns X, Y coordinates
-	Position() (x, y float64)
-
-	// SetPosition updates coordinates
-	SetPosition(x, y float64)
-
-	// Rotation returns rotation angle in radians
-	Rotation() float64
-
-	// SetRotation updates rotation angle
-	SetRotation(angle float64)
-
-	// DistanceTo calculates distance to another transform
-	DistanceTo(other Transform) float64
-
-	// LookAt rotates to face target position
-	LookAt(x, y float64)
-}

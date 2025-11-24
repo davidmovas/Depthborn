@@ -6,6 +6,7 @@ import (
 	"github.com/davidmovas/Depthborn/internal/core/attribute"
 	"github.com/davidmovas/Depthborn/internal/core/types"
 	"github.com/davidmovas/Depthborn/internal/infra"
+	"github.com/davidmovas/Depthborn/internal/world/spatial"
 )
 
 // Entity represents any game object in the world
@@ -27,7 +28,7 @@ type Entity interface {
 	StatusEffects() StatusManager
 
 	// Transform returns position and orientation
-	Transform() types.Transform
+	Transform() spatial.Transform
 
 	// Callbacks returns callback registry
 	Callbacks() types.CallbackRegistry

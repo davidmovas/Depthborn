@@ -63,7 +63,7 @@ type Persistent interface {
 // Cloneable represents entities that can be deep-copied
 type Cloneable interface {
 	// Clone creates a deep copy of the entity
-	Clone() interface{}
+	Clone() any
 }
 
 // Validatable represents entities that can validate their state

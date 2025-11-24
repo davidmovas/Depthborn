@@ -4,113 +4,139 @@ import (
 	"context"
 
 	"github.com/davidmovas/Depthborn/internal/core/types"
-	"github.com/davidmovas/Depthborn/internal/infra"
+	"github.com/davidmovas/Depthborn/internal/world/spatial"
 )
 
-var _ Entity = (*BaseEntity)(nil)
+var _ Entity = (*Base)(nil)
 
-type BaseEntity struct {
-	infra.BasePersistent
+type Base struct{}
 
-	identity    types.Identity
-	named       types.Named
-	leveled     types.Leveled
-	tagged      types.Tagged
-	alive       types.Alive
-	actionable  types.Actionable
-	cloneable   types.Cloneable
-	validatable types.Validatable
-
-	attributes    AttributeManager
-	statusEffects StatusManager
-	transform     types.Transform
-	callbacks     types.CallbackRegistry
+func (b *Base) ID() string {
+	//TODO implement me
+	panic("implement me")
 }
 
-func NewBaseEntity(id string, name string) *BaseEntity {
-	entity := &BaseEntity{
-		attributes:    NewBaseAttributeManager(),
-		statusEffects: NewBaseStatusManager(),
-		transform:     NewBaseTransform(),
-		callbacks:     NewBaseCallbackRegistry(),
-	}
-
-	entity.identity = NewBaseIdentity(id, "entity")
-	entity.named = NewBaseNamed(name)
-	entity.leveled = NewBaseLeveled(1)
-	entity.tagged = NewBaseTagged()
-	entity.alive = NewBaseAlive(entity)
-	entity.actionable = NewBaseActionable(true)
-	entity.cloneable = NewBaseCloneable()
-	entity.validatable = NewBaseValidatable()
-
-	return entity
+func (b *Base) Type() string {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) ID() string {
-	return be.identity.ID()
+func (b *Base) Snapshot() ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Type() string {
-	return be.identity.Type()
+func (b *Base) Restore(data []byte) error {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Name() string {
-	return be.named.Name()
+func (b *Base) Version() int64 {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) SetName(name string) {
-	be.named.SetName(name)
+func (b *Base) IncrementVersion() int64 {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Level() int {
-	return be.leveled.Level()
+func (b *Base) Delta(fromVersion int64) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) SetLevel(level int) {
-	be.leveled.SetLevel(level)
+func (b *Base) ApplyDelta(delta []byte) error {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Tags() types.TagSet {
-	return be.tagged.Tags()
+func (b *Base) CreatedAt() int64 {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) IsAlive() bool {
-	return be.alive.IsAlive()
+func (b *Base) UpdatedAt() int64 {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Kill(ctx context.Context, killerID string) error {
-	return be.alive.Kill(ctx, killerID)
+func (b *Base) Touch() {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Revive(ctx context.Context, healthPercent float64) error {
-	return be.alive.Revive(ctx, healthPercent)
+func (b *Base) Name() string {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) CanAct() bool {
-	return be.actionable.CanAct()
+func (b *Base) SetName(name string) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Clone() interface{} {
-	return be.cloneable.Clone()
+func (b *Base) Level() int {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Validate() error {
-	return be.validatable.Validate()
+func (b *Base) SetLevel(level int) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Attributes() AttributeManager {
-	return be.attributes
+func (b *Base) Tags() types.TagSet {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) StatusEffects() StatusManager {
-	return be.statusEffects
+func (b *Base) IsAlive() bool {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Transform() types.Transform {
-	return be.transform
+func (b *Base) Kill(ctx context.Context, killerID string) error {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (be *BaseEntity) Callbacks() types.CallbackRegistry {
-	return be.callbacks
+func (b *Base) Revive(ctx context.Context, healthPercent float64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) CanAct() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) Clone() any {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) Validate() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) Attributes() AttributeManager {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) StatusEffects() StatusManager {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) Transform() spatial.Transform {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *Base) Callbacks() types.CallbackRegistry {
+	//TODO implement me
+	panic("implement me")
 }

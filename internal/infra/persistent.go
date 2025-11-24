@@ -4,7 +4,6 @@ import "time"
 
 var _ Persistent = (*BasePersistent)(nil)
 
-// BasePersistent provides common persistence functionality
 type BasePersistent struct {
 	id        string
 	version   int64
