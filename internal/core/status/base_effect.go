@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/davidmovas/Depthborn/pkg/identifier"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
@@ -25,11 +26,8 @@ type BaseEffect struct {
 
 	mu sync.RWMutex
 
-	// Hooks for custom behavior
-	onApplyFuncs  []func(ctx context.Context, targetID string) error
-	onTickFuncs   []func(ctx context.Context, targetID string, deltaMs int64) error
-	onRemoveFuncs []func(ctx context.Context, targetID string) error
-	onStackFuncs  []func(ctx context.Context, targetID string, newStacks int) error
+	// Hooks for external event handling
+	events map[EffectEventType]map[string]func(ctx context.Context, ev EffectEvent) error
 }
 
 func NewEffect(config EffectConfig) *BaseEffect {
@@ -48,21 +46,18 @@ func NewEffect(config EffectConfig) *BaseEffect {
 	}
 
 	return &BaseEffect{
-		id:            id,
-		effectType:    config.EffectType,
-		name:          config.Name,
-		duration:      config.Duration,
-		stacks:        int32(config.InitialStacks),
-		maxStacks:     config.MaxStacks,
-		sourceID:      config.SourceID,
-		targetID:      config.TargetID,
-		metadata:      config.Metadata,
-		tickInterval:  config.TickInterval,
-		lastTick:      0,
-		onApplyFuncs:  config.OnApplyFuncs,
-		onTickFuncs:   config.OnTickFuncs,
-		onRemoveFuncs: config.OnRemoveFuncs,
-		onStackFuncs:  config.OnStackFuncs,
+		id:           id,
+		effectType:   config.EffectType,
+		name:         config.Name,
+		duration:     config.Duration,
+		stacks:       int32(config.InitialStacks),
+		maxStacks:    config.MaxStacks,
+		sourceID:     config.SourceID,
+		targetID:     config.TargetID,
+		metadata:     config.Metadata,
+		tickInterval: config.TickInterval,
+		lastTick:     0,
+		events:       make(map[EffectEventType]map[string]func(context.Context, EffectEvent) error),
 	}
 }
 
@@ -146,80 +141,81 @@ func (e *BaseEffect) TargetID() string {
 	return e.targetID
 }
 
-func (e *BaseEffect) OnApply(ctx context.Context, targetID string) error {
+func (e *BaseEffect) OnEvent(ctx context.Context, ev EffectEvent) error {
 	e.mu.RLock()
-	funcs := append([]func(context.Context, string) error{}, e.onApplyFuncs...)
+
+	var (
+		callbacks = make([]func(context.Context, EffectEvent) error, len(e.events[ev.Type]))
+		count     int
+	)
+
+	for _, fn := range e.events[ev.Type] {
+		callbacks[count] = fn
+		count++
+	}
+
 	e.mu.RUnlock()
 
-	for _, fn := range funcs {
-		if err := fn(ctx, targetID); err != nil {
+	for _, fn := range callbacks {
+		if err := fn(ctx, ev); err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func (e *BaseEffect) OnApply(ctx context.Context, targetID string) error {
+	return e.OnEvent(ctx, EffectEvent{
+		Effect:   e,
+		TargetID: targetID,
+		Type:     EventApply,
+	})
 }
 
 func (e *BaseEffect) OnTick(ctx context.Context, targetID string, deltaMs int64) error {
-	e.mu.RLock()
-	funcs := append([]func(context.Context, string, int64) error{}, e.onTickFuncs...)
-	e.mu.RUnlock()
-
-	for _, fn := range funcs {
-		if err := fn(ctx, targetID, deltaMs); err != nil {
-			return err
-		}
-	}
-	return nil
+	return e.OnEvent(ctx, EffectEvent{
+		Effect:   e,
+		TargetID: targetID,
+		DeltaMs:  deltaMs,
+		Type:     EventTick,
+	})
 }
 
 func (e *BaseEffect) OnRemove(ctx context.Context, targetID string) error {
-	e.mu.RLock()
-	funcs := append([]func(context.Context, string) error{}, e.onRemoveFuncs...)
-	e.mu.RUnlock()
-
-	for _, fn := range funcs {
-		if err := fn(ctx, targetID); err != nil {
-			return err
-		}
-	}
-	return nil
+	return e.OnEvent(ctx, EffectEvent{
+		Effect:   e,
+		TargetID: targetID,
+		Type:     EventRemove,
+	})
 }
 
 func (e *BaseEffect) OnStack(ctx context.Context, targetID string, newStacks int) error {
-	e.mu.RLock()
-	funcs := append([]func(context.Context, string, int) error{}, e.onStackFuncs...)
-	e.mu.RUnlock()
+	return e.OnEvent(ctx, EffectEvent{
+		Effect:   e,
+		TargetID: targetID,
+		NewStack: newStacks,
+		Type:     EventStack,
+	})
+}
 
-	for _, fn := range funcs {
-		if err := fn(ctx, targetID, newStacks); err != nil {
-			return err
-		}
+func (e *BaseEffect) AddOnEvent(eventType EffectEventType,
+	fn func(ctx context.Context, ev EffectEvent) error,
+) func() {
+	id := identifier.New()
+
+	e.mu.Lock()
+	if e.events[eventType] == nil {
+		e.events[eventType] = make(map[string]func(context.Context, EffectEvent) error)
 	}
-	return nil
-}
+	e.events[eventType][id] = fn
+	e.mu.Unlock()
 
-func (e *BaseEffect) AddOnApply(fn func(ctx context.Context, targetID string) error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.onApplyFuncs = append(e.onApplyFuncs, fn)
-}
-
-func (e *BaseEffect) AddOnTick(fn func(ctx context.Context, targetID string, deltaMs int64) error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.onTickFuncs = append(e.onTickFuncs, fn)
-}
-
-func (e *BaseEffect) AddOnRemove(fn func(ctx context.Context, targetID string) error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.onRemoveFuncs = append(e.onRemoveFuncs, fn)
-}
-
-func (e *BaseEffect) AddOnStack(fn func(ctx context.Context, targetID string, newStacks int) error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.onStackFuncs = append(e.onStackFuncs, fn)
+	return func() {
+		e.mu.Lock()
+		delete(e.events[eventType], id)
+		e.mu.Unlock()
+	}
 }
 
 func (e *BaseEffect) CanStack(other Effect) bool {

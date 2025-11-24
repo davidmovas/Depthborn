@@ -38,29 +38,23 @@ type Effect interface {
 	// TargetID returns ID of entity receiving effect
 	TargetID() string
 
-	// OnApply is called when first applied
+	// OnEvent processes effect event
+	OnEvent(ctx context.Context, ev EffectEvent) error
+
+	// OnApply invoked when effect applied
 	OnApply(ctx context.Context, targetID string) error
 
-	// OnTick is called periodically
+	// OnTick invoked periodically
 	OnTick(ctx context.Context, targetID string, deltaMs int64) error
 
-	// OnRemove is called when removed
+	// OnRemove invoked when effect removed
 	OnRemove(ctx context.Context, targetID string) error
 
-	// OnStack is called when stacks added
+	// OnStack invoked when stack count changed
 	OnStack(ctx context.Context, targetID string, newStacks int) error
 
-	// AddOnApply is called when first applied
-	AddOnApply(fn func(ctx context.Context, targetID string) error)
-
-	// AddOnTick is called periodically
-	AddOnTick(fn func(ctx context.Context, targetID string, deltaMs int64) error)
-
-	// AddOnRemove is called when removed
-	AddOnRemove(fn func(ctx context.Context, targetID string) error)
-
-	// AddOnStack is called when stacks added
-	AddOnStack(fn func(ctx context.Context, targetID string, newStacks int) error)
+	// AddOnEvent subscribes to effect events
+	AddOnEvent(eventType EffectEventType, fn func(ctx context.Context, eventData EffectEvent) error) (unsubscribe func())
 
 	// CanStack checks if can stack with another
 	CanStack(other Effect) bool
@@ -153,6 +147,23 @@ type Builder interface {
 
 	// Build creates effect
 	Build() (Effect, error)
+}
+
+type EffectEventType int
+
+const (
+	EventApply EffectEventType = iota
+	EventTick
+	EventRemove
+	EventStack
+)
+
+type EffectEvent struct {
+	Effect   Effect
+	TargetID string
+	DeltaMs  int64
+	NewStack int
+	Type     EffectEventType
 }
 
 // Category groups effect types

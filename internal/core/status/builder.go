@@ -3,12 +3,16 @@ package status
 import (
 	"context"
 	"fmt"
+	"sync"
 )
 
 var _ Builder = (*EffectBuilder)(nil)
 
 type EffectBuilder struct {
 	config EffectConfig
+
+	mu     sync.RWMutex
+	events map[EffectEventType][]func(ctx context.Context, ev EffectEvent) error
 }
 
 type EffectConfig struct {
@@ -21,11 +25,6 @@ type EffectConfig struct {
 	TargetID      string
 	Metadata      map[string]any
 	TickInterval  int64
-
-	OnApplyFuncs  []func(ctx context.Context, targetID string) error
-	OnTickFuncs   []func(ctx context.Context, targetID string, deltaMs int64) error
-	OnRemoveFuncs []func(ctx context.Context, targetID string) error
-	OnStackFuncs  []func(ctx context.Context, targetID string, newStacks int) error
 }
 
 func NewBuilder() *EffectBuilder {
@@ -33,9 +32,11 @@ func NewBuilder() *EffectBuilder {
 		config: EffectConfig{
 			MaxStacks:     1,
 			InitialStacks: 1,
-			Duration:      -1, // Infinite by default
+			Duration:      -1,
 			Metadata:      make(map[string]any),
 		},
+
+		events: make(map[EffectEventType][]func(ctx context.Context, ev EffectEvent) error),
 	}
 }
 
@@ -70,7 +71,7 @@ func (b *EffectBuilder) WithTarget(targetID string) Builder {
 	return b
 }
 
-func (b *EffectBuilder) WithMetadata(key string, value interface{}) Builder {
+func (b *EffectBuilder) WithMetadata(key string, value any) Builder {
 	b.config.Metadata[key] = value
 	return b
 }
@@ -80,24 +81,40 @@ func (b *EffectBuilder) WithTickInterval(ms int64) Builder {
 	return b
 }
 
-func (b *EffectBuilder) WithOnApply(fn func(ctx context.Context, targetID string) error) Builder {
-	b.config.OnApplyFuncs = append(b.config.OnApplyFuncs, fn)
+func (b *EffectBuilder) WithOnEvent(eventType EffectEventType,
+	fn func(ctx context.Context, ev EffectEvent) error,
+) Builder {
+
+	if b.events == nil {
+		b.events = make(map[EffectEventType][]func(context.Context, EffectEvent) error)
+	}
+
+	b.events[eventType] = append(b.events[eventType], fn)
 	return b
 }
 
-func (b *EffectBuilder) WithOnTick(fn func(ctx context.Context, targetID string, deltaMs int64) error) Builder {
-	b.config.OnTickFuncs = append(b.config.OnTickFuncs, fn)
-	return b
+func (b *EffectBuilder) WithOnApply(fn func(context.Context, string) error) Builder {
+	return b.WithOnEvent(EventApply, func(ctx context.Context, ev EffectEvent) error {
+		return fn(ctx, ev.TargetID)
+	})
 }
 
-func (b *EffectBuilder) WithOnRemove(fn func(ctx context.Context, targetID string) error) Builder {
-	b.config.OnRemoveFuncs = append(b.config.OnRemoveFuncs, fn)
-	return b
+func (b *EffectBuilder) WithOnTick(fn func(context.Context, string, int64) error) Builder {
+	return b.WithOnEvent(EventTick, func(ctx context.Context, ev EffectEvent) error {
+		return fn(ctx, ev.TargetID, ev.DeltaMs)
+	})
 }
 
-func (b *EffectBuilder) WithOnStack(fn func(ctx context.Context, targetID string, newStacks int) error) Builder {
-	b.config.OnStackFuncs = append(b.config.OnStackFuncs, fn)
-	return b
+func (b *EffectBuilder) WithOnRemove(fn func(context.Context, string) error) Builder {
+	return b.WithOnEvent(EventRemove, func(ctx context.Context, ev EffectEvent) error {
+		return fn(ctx, ev.TargetID)
+	})
+}
+
+func (b *EffectBuilder) WithOnStack(fn func(context.Context, string, int) error) Builder {
+	return b.WithOnEvent(EventStack, func(ctx context.Context, ev EffectEvent) error {
+		return fn(ctx, ev.TargetID, ev.NewStack)
+	})
 }
 
 func (b *EffectBuilder) Build() (Effect, error) {
@@ -105,27 +122,34 @@ func (b *EffectBuilder) Build() (Effect, error) {
 	if b.config.EffectType == "" {
 		return nil, fmt.Errorf("effect type is required")
 	}
-
 	if b.config.Name == "" {
 		b.config.Name = b.config.EffectType
 	}
-
 	if b.config.TargetID == "" {
 		return nil, fmt.Errorf("target ID is required")
 	}
-
 	if b.config.MaxStacks < 1 {
 		return nil, fmt.Errorf("max stacks must be at least 1")
 	}
-
 	if b.config.InitialStacks < 1 || b.config.InitialStacks > b.config.MaxStacks {
 		return nil, fmt.Errorf("initial stacks must be between 1 and max stacks")
 	}
 
-	return NewEffect(b.config), nil
+	// Create effect
+	eff := NewEffect(b.config)
+
+	// Register callbacks inside effect
+	for t, list := range b.events {
+		for _, fn := range list {
+			eff.AddOnEvent(t, fn)
+		}
+	}
+	b.mu.RUnlock()
+
+	return eff, nil
 }
 
-// Reset resets builder to initial state
+// Reset clears config + all callbacks
 func (b *EffectBuilder) Reset() *EffectBuilder {
 	b.config = EffectConfig{
 		MaxStacks:     1,
@@ -133,5 +157,10 @@ func (b *EffectBuilder) Reset() *EffectBuilder {
 		Duration:      -1,
 		Metadata:      make(map[string]any),
 	}
+
+	b.mu.Lock()
+	b.events = make(map[EffectEventType][]func(context.Context, EffectEvent) error)
+	b.mu.Unlock()
+
 	return b
 }
