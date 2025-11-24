@@ -77,3 +77,13 @@ type Disposable interface {
 	// Dispose releases resources held by entity
 	Dispose() error
 }
+
+// Serializable represents entities that can serialize/deserialize their state
+// This interface should be implemented by any entity that needs to be persisted
+type Serializable interface {
+	// SerializeState converts entity state to map for persistence
+	SerializeState() (map[string]any, error)
+
+	// DeserializeState restores entity state from map
+	DeserializeState(state map[string]any) error
+}
