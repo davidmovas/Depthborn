@@ -25,6 +25,7 @@ func NewPersistenceSystem(dbName string, reg registry.Registry, strategy Snapsho
 	deltaStore := sqlite.NewDeltaStore(db)
 
 	repo := NewRepository(RepositoryConfig{
+		DB:            db,
 		SnapshotStore: snapshotStore,
 		DeltaStore:    deltaStore,
 		Registry:      reg,

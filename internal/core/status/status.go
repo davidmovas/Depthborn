@@ -50,11 +50,25 @@ type Effect interface {
 	// OnStack is called when stacks added
 	OnStack(ctx context.Context, targetID string, newStacks int) error
 
+	// AddOnApply is called when first applied
+	AddOnApply(fn func(ctx context.Context, targetID string) error)
+
+	// AddOnTick is called periodically
+	AddOnTick(fn func(ctx context.Context, targetID string, deltaMs int64) error)
+
+	// AddOnRemove is called when removed
+	AddOnRemove(fn func(ctx context.Context, targetID string) error)
+
+	// AddOnStack is called when stacks added
+	AddOnStack(fn func(ctx context.Context, targetID string, newStacks int) error)
+
 	// CanStack checks if can stack with another
 	CanStack(other Effect) bool
 
 	// Metadata returns effect-specific data
-	Metadata() map[string]interface{}
+	Metadata() map[string]any
+
+	SetMetadata(key string, value any)
 }
 
 // Manager manages status effects on entity
@@ -120,10 +134,22 @@ type Builder interface {
 	WithTarget(targetID string) Builder
 
 	// WithMetadata adds custom data
-	WithMetadata(key string, value interface{}) Builder
+	WithMetadata(key string, value any) Builder
 
 	// WithTickInterval sets tick rate
 	WithTickInterval(ms int64) Builder
+
+	// WithOnApply sets callback for OnApply event
+	WithOnApply(fn func(ctx context.Context, targetID string) error) Builder
+
+	// WithOnTick sets callback for OnTick event
+	WithOnTick(fn func(ctx context.Context, targetID string, deltaMs int64) error) Builder
+
+	// WithOnRemove sets callback for OnRemove event
+	WithOnRemove(fn func(ctx context.Context, targetID string) error) Builder
+
+	// WithOnStack sets callback for OnStack event
+	WithOnStack(fn func(ctx context.Context, targetID string, newStacks int) error) Builder
 
 	// Build creates effect
 	Build() (Effect, error)

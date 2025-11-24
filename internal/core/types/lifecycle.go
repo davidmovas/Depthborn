@@ -19,21 +19,3 @@ type Actionable interface {
 	// CanAct returns true if entity can perform actions
 	CanAct() bool
 }
-
-// Disposable represents entities that need cleanup
-type Disposable interface {
-	// Dispose releases resources
-	Dispose() error
-}
-
-// Cloneable represents entities that can be copied
-type Cloneable interface {
-	// Clone creates deep copy
-	Clone() any
-}
-
-// Validatable represents entities that can validate state
-type Validatable interface {
-	// Validate checks if state is valid
-	Validate() error
-}

@@ -23,6 +23,7 @@ type Repository struct {
 }
 
 type RepositoryConfig struct {
+	DB            *sqlite.DB
 	SnapshotStore persistence.SnapshotStore
 	DeltaStore    persistence.DeltaStore
 	Registry      registry.Registry
@@ -35,6 +36,7 @@ func NewRepository(config RepositoryConfig) *Repository {
 	}
 
 	return &Repository{
+		db:            config.DB,
 		snapshotStore: config.SnapshotStore,
 		deltaStore:    config.DeltaStore,
 		registry:      config.Registry,

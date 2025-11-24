@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/davidmovas/Depthborn/internal/core/attribute"
+	"github.com/davidmovas/Depthborn/internal/core/status"
 	"github.com/davidmovas/Depthborn/internal/core/types"
 	"github.com/davidmovas/Depthborn/internal/infra"
 	"github.com/davidmovas/Depthborn/internal/world/spatial"
@@ -18,14 +19,14 @@ type Entity interface {
 	types.Tagged
 	types.Alive
 	types.Actionable
-	types.Cloneable
-	types.Validatable
+	infra.Cloneable
+	infra.Validatable
 
 	// Attributes returns attribute manager
-	Attributes() AttributeManager
+	Attributes() attribute.Manager
 
 	// StatusEffects returns status effect manager
-	StatusEffects() StatusManager
+	StatusEffects() status.Manager
 
 	// Transform returns position and orientation
 	Transform() spatial.Transform
@@ -46,46 +47,13 @@ type AttributeManager interface {
 	SetBase(attrType attribute.Type, value float64)
 
 	// AddModifier adds attribute modifier
-	AddModifier(attrType attribute.Type, modifier AttributeModifier)
+	AddModifier(attrType attribute.Type, modifier attribute.Modifier)
 
 	// RemoveModifier removes attribute modifier
 	RemoveModifier(attrType attribute.Type, modifierID string)
 
 	// RecalculateAll recalculates all attributes
 	RecalculateAll()
-}
-
-// AttributeModifier modifies attribute values (forward declaration)
-type AttributeModifier interface {
-	// ID returns unique modifier identifier
-	ID() string
-
-	// Value returns modifier value
-	Value() float64
-
-	// Type returns modifier type (flat, increased, more)
-	Type() string
-
-	// Source returns what created this modifier
-	Source() string
-}
-
-// StatusManager manages status effects (forward declaration)
-type StatusManager interface {
-	// Apply adds status effect
-	Apply(ctx context.Context, effectID string, sourceID string) error
-
-	// Remove removes status effect
-	Remove(ctx context.Context, effectID string) error
-
-	// Has checks if status effect is active
-	Has(effectType string) bool
-
-	// GetAll returns all active effects
-	GetAll() []string
-
-	// Update processes all effects
-	Update(ctx context.Context, deltaMs int64) error
 }
 
 // Living represents entities with health
