@@ -22,6 +22,15 @@ type CallbackRegistry interface {
 	// OnHeal registers heal callback
 	OnHeal(callback HealCallback)
 
+	// TriggerDeath invokes death callbacks
+	TriggerDeath(ctx context.Context, victimID, killerID string)
+
+	// TriggerDamage invokes damage callbacks
+	TriggerDamage(ctx context.Context, victimID string, damage float64, sourceID string)
+
+	// TriggerHeal invokes heal callbacks
+	TriggerHeal(ctx context.Context, targetID string, amount float64, sourceID string)
+
 	// ClearCallbacks removes all callbacks
 	ClearCallbacks()
 }

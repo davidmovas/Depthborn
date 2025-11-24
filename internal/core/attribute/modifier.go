@@ -1,8 +1,8 @@
 package attribute
 
-var _ Modifier = (*modifier)(nil)
+var _ Modifier = (*BaseModifier)(nil)
 
-type modifier struct {
+type BaseModifier struct {
 	id       string
 	modType  ModifierType
 	value    float64
@@ -11,8 +11,19 @@ type modifier struct {
 	active   bool
 }
 
-func NewModifier(id string, modType ModifierType, value float64, source string, priority int) Modifier {
-	return &modifier{
+func NewModifier(id string, modType ModifierType, value float64, source string) Modifier {
+	return &BaseModifier{
+		id:       id,
+		modType:  modType,
+		value:    value,
+		source:   source,
+		priority: 0,
+		active:   true,
+	}
+}
+
+func NewModifierWithPriority(id string, modType ModifierType, value float64, source string, priority int) Modifier {
+	return &BaseModifier{
 		id:       id,
 		modType:  modType,
 		value:    value,
@@ -22,30 +33,34 @@ func NewModifier(id string, modType ModifierType, value float64, source string, 
 	}
 }
 
-func (m *modifier) ID() string {
+func (m *BaseModifier) ID() string {
 	return m.id
 }
 
-func (m *modifier) Type() ModifierType {
+func (m *BaseModifier) Type() ModifierType {
 	return m.modType
 }
 
-func (m *modifier) Value() float64 {
+func (m *BaseModifier) Value() float64 {
 	return m.value
 }
 
-func (m *modifier) Source() string {
+func (m *BaseModifier) Source() string {
 	return m.source
 }
 
-func (m *modifier) Priority() int {
+func (m *BaseModifier) Priority() int {
 	return m.priority
 }
 
-func (m *modifier) IsActive() bool {
+func (m *BaseModifier) IsActive() bool {
 	return m.active
 }
 
-func (m *modifier) SetActive(active bool) {
+func (m *BaseModifier) SetActive(active bool) {
 	m.active = active
+}
+
+func (m *BaseModifier) SetValue(value float64) {
+	m.value = value
 }

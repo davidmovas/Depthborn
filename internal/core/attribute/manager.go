@@ -1,112 +1,176 @@
 package attribute
 
-var _ Manager = (*attributeManager)(nil)
+import "sync"
 
-type attributeManager struct {
-	baseValues    map[Type]float64
-	currentValues map[Type]float64
-	modifiers     map[Type]map[string]Modifier
-	formulas      map[Type]Formula
+var _ Manager = (*BaseManager)(nil)
+
+type BaseManager struct {
+	mu sync.RWMutex
+
+	baseValues map[Type]float64
+	modifiers  map[Type]Set
+	formulas   map[Type]Formula
+	cache      map[Type]float64
+	dirty      map[Type]bool
 }
 
-func NewAttributeManager() Manager {
-	return &attributeManager{
-		baseValues:    make(map[Type]float64),
-		currentValues: make(map[Type]float64),
-		modifiers:     make(map[Type]map[string]Modifier),
-		formulas:      make(map[Type]Formula),
+func NewManager() *BaseManager {
+	return &BaseManager{
+		baseValues: make(map[Type]float64),
+		modifiers:  make(map[Type]Set),
+		formulas:   make(map[Type]Formula),
+		cache:      make(map[Type]float64),
+		dirty:      make(map[Type]bool),
 	}
 }
 
-func (am *attributeManager) Get(attr Type) float64 {
-	if value, exists := am.currentValues[attr]; exists {
-		return value
-	}
-	return 0.0
-}
-
-func (am *attributeManager) GetBase(attr Type) float64 {
-	if value, exists := am.baseValues[attr]; exists {
-		return value
-	}
-	return 0.0
-}
-
-func (am *attributeManager) SetBase(attr Type, value float64) {
-	am.baseValues[attr] = value
-	am.recalculateAttribute(attr)
-}
-
-func (am *attributeManager) AddModifier(attr Type, modifier Modifier) {
-	if _, exists := am.modifiers[attr]; !exists {
-		am.modifiers[attr] = make(map[string]Modifier)
-	}
-	am.modifiers[attr][modifier.ID()] = modifier
-	am.recalculateAttribute(attr)
-}
-
-func (am *attributeManager) RemoveModifier(attr Type, modifierID string) {
-	if modifiers, exists := am.modifiers[attr]; exists {
-		delete(modifiers, modifierID)
-		am.recalculateAttribute(attr)
-	}
-}
-
-func (am *attributeManager) RemoveAllModifiers(attr Type, modType ModifierType) {
-	if modifiers, exists := am.modifiers[attr]; exists {
-		for id, mod := range modifiers {
-			if mod.Type() == modType {
-				delete(modifiers, id)
-			}
+func (m *BaseManager) Get(attr Type) float64 {
+	m.mu.RLock()
+	if !m.dirty[attr] {
+		if cached, ok := m.cache[attr]; ok {
+			m.mu.RUnlock()
+			return cached
 		}
-		am.recalculateAttribute(attr)
+	}
+	m.mu.RUnlock()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	value := m.calculate(attr)
+	m.cache[attr] = value
+	m.dirty[attr] = false
+
+	return value
+}
+
+func (m *BaseManager) GetBase(attr Type) float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.baseValues[attr]
+}
+
+func (m *BaseManager) SetBase(attr Type, value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.baseValues[attr] = value
+	m.markDirty(attr)
+}
+
+func (m *BaseManager) AddModifier(attr Type, modifier Modifier) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.modifiers[attr] == nil {
+		m.modifiers[attr] = NewSet()
+	}
+
+	m.modifiers[attr].Add(modifier)
+	m.markDirty(attr)
+}
+
+func (m *BaseManager) RemoveModifier(attr Type, modifierID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if set, ok := m.modifiers[attr]; ok {
+		set.Remove(modifierID)
+		m.markDirty(attr)
 	}
 }
 
-func (am *attributeManager) GetModifiers(attr Type) []Modifier {
-	if modifiers, exists := am.modifiers[attr]; exists {
-		result := make([]Modifier, 0, len(modifiers))
-		for _, mod := range modifiers {
-			result = append(result, mod)
+func (m *BaseManager) RemoveAllModifiers(attr Type, modType ModifierType) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if set, ok := m.modifiers[attr]; ok {
+		for _, mod := range set.GetByType(modType) {
+			set.Remove(mod.ID())
 		}
-		return result
+		m.markDirty(attr)
+	}
+}
+
+func (m *BaseManager) GetModifiers(attr Type) []Modifier {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if set, ok := m.modifiers[attr]; ok {
+		return set.GetAll()
 	}
 	return nil
 }
 
-func (am *attributeManager) RecalculateAll() {
-	for attr := range am.baseValues {
-		am.recalculateAttribute(attr)
+func (m *BaseManager) RecalculateAll() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for attr := range m.baseValues {
+		m.dirty[attr] = true
 	}
+
+	for attr := range m.formulas {
+		m.dirty[attr] = true
+	}
+
+	m.cache = make(map[Type]float64)
 }
 
-func (am *attributeManager) Snapshot() map[Type]float64 {
+func (m *BaseManager) Snapshot() map[Type]float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	snapshot := make(map[Type]float64)
-	for attr, value := range am.currentValues {
-		snapshot[attr] = value
+
+	for attr := range m.baseValues {
+		m.mu.RUnlock()
+		snapshot[attr] = m.Get(attr)
+		m.mu.RLock()
 	}
-	return snapshot
-}
 
-func (am *attributeManager) recalculateAttribute(attr Type) {
-	baseValue := am.baseValues[attr]
-
-	if formula, hasFormula := am.formulas[attr]; hasFormula {
-		baseValue = formula.Calculate(am)
-	} else {
-		if modifiers, exists := am.modifiers[attr]; exists {
-			set := NewModifierSet()
-			for _, mod := range modifiers {
-				set.Add(mod)
-			}
-			baseValue = set.Apply(baseValue)
+	for attr := range m.formulas {
+		if _, exists := snapshot[attr]; !exists {
+			m.mu.RUnlock()
+			snapshot[attr] = m.Get(attr)
+			m.mu.RLock()
 		}
 	}
 
-	am.currentValues[attr] = baseValue
+	return snapshot
 }
 
-func (am *attributeManager) SetFormula(attr Type, formula Formula) {
-	am.formulas[attr] = formula
-	am.recalculateAttribute(attr)
+func (m *BaseManager) SetFormula(attr Type, formula Formula) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.formulas[attr] = formula
+	m.markDirty(attr)
+}
+
+func (m *BaseManager) calculate(attr Type) float64 {
+	if formula, hasFormula := m.formulas[attr]; hasFormula {
+		return formula.Calculate(m)
+	}
+
+	base := m.baseValues[attr]
+
+	if set, ok := m.modifiers[attr]; ok {
+		return set.Apply(base)
+	}
+
+	return base
+}
+
+func (m *BaseManager) markDirty(attr Type) {
+	m.dirty[attr] = true
+
+	for otherAttr, formula := range m.formulas {
+		for _, dep := range formula.Dependencies() {
+			if dep == attr {
+				m.dirty[otherAttr] = true
+				break
+			}
+		}
+	}
 }

@@ -1,81 +1,87 @@
 package attribute
 
-var _ Set = (*modifierSet)(nil)
+import "sort"
 
-type modifierSet struct {
+var _ Set = (*BaseSet)(nil)
+
+type BaseSet struct {
 	modifiers map[string]Modifier
 }
 
-func NewModifierSet() Set {
-	return &modifierSet{
+func NewSet() *BaseSet {
+	return &BaseSet{
 		modifiers: make(map[string]Modifier),
 	}
 }
 
-func (ms *modifierSet) Add(modifier Modifier) {
-	ms.modifiers[modifier.ID()] = modifier
+func (s *BaseSet) Add(modifier Modifier) {
+	s.modifiers[modifier.ID()] = modifier
 }
 
-func (ms *modifierSet) Remove(modifierID string) {
-	delete(ms.modifiers, modifierID)
+func (s *BaseSet) Remove(modifierID string) {
+	delete(s.modifiers, modifierID)
 }
 
-func (ms *modifierSet) GetAll() []Modifier {
-	result := make([]Modifier, 0, len(ms.modifiers))
-	for _, mod := range ms.modifiers {
-		result = append(result, mod)
-	}
-	return result
-}
-
-func (ms *modifierSet) GetByType(modType ModifierType) []Modifier {
-	result := make([]Modifier, 0)
-	for _, mod := range ms.modifiers {
-		if mod.Type() == modType {
+func (s *BaseSet) GetAll() []Modifier {
+	result := make([]Modifier, 0, len(s.modifiers))
+	for _, mod := range s.modifiers {
+		if mod.IsActive() {
 			result = append(result, mod)
 		}
 	}
 	return result
 }
 
-func (ms *modifierSet) Clear() {
-	ms.modifiers = make(map[string]Modifier)
+func (s *BaseSet) GetByType(modType ModifierType) []Modifier {
+	result := make([]Modifier, 0)
+	for _, mod := range s.modifiers {
+		if mod.IsActive() && mod.Type() == modType {
+			result = append(result, mod)
+		}
+	}
+	return result
 }
 
-func (ms *modifierSet) Apply(baseValue float64) float64 {
-	modifiers := ms.GetAll()
+func (s *BaseSet) Clear() {
+	s.modifiers = make(map[string]Modifier)
+}
 
-	// Sort by priority (higher first)
-	// TODO: Implement proper sorting by priority
+func (s *BaseSet) Apply(baseValue float64) float64 {
+	mods := s.GetAll()
 
-	result := baseValue
-	var increasedSum float64
-	var moreProduct float64 = 1.0
+	sort.Slice(mods, func(i, j int) bool {
+		return mods[i].Priority() > mods[j].Priority()
+	})
 
-	for _, mod := range modifiers {
-		if !mod.IsActive() {
-			continue
-		}
-
-		switch mod.Type() {
-		case ModFlat:
-			result += mod.Value()
-		case ModIncreased:
-			increasedSum += mod.Value()
-		case ModMore:
-			moreProduct *= 1.0 + mod.Value()
-		case ModOverride:
-			result = mod.Value()
-			increasedSum = 0
-			moreProduct = 1.0
+	for _, mod := range mods {
+		if mod.Type() == ModOverride {
+			return mod.Value()
 		}
 	}
 
-	// Apply increased (additive)
-	result *= 1.0 + increasedSum
+	value := baseValue
 
-	// Apply more (multiplicative)
-	result *= moreProduct
+	for _, mod := range mods {
+		if mod.Type() == ModFlat {
+			value += mod.Value()
+		}
+	}
 
-	return result
+	increasedSum := 0.0
+	for _, mod := range mods {
+		if mod.Type() == ModIncreased {
+			increasedSum += mod.Value()
+		}
+	}
+	if increasedSum != 0 {
+		value *= 1.0 + increasedSum/100.0
+	}
+
+	for _, mod := range mods {
+		if mod.Type() == ModMore {
+			value *= 1.0 + mod.Value()/100.0
+		}
+	}
+
+	return value
 }
