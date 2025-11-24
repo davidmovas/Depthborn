@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/davidmovas/Depthborn/internal/infra"
 	"github.com/davidmovas/Depthborn/internal/infra/registry"
 	"github.com/davidmovas/Depthborn/internal/persistence"
 	"github.com/davidmovas/Depthborn/internal/persistence/store/sqlite"
+	"github.com/davidmovas/Depthborn/pkg/dbx"
 )
 
 var _ persistence.Repository = (*Repository)(nil)
 
 type Repository struct {
+	db            *sqlite.DB
 	snapshotStore persistence.SnapshotStore
 	deltaStore    persistence.DeltaStore
 	registry      registry.Registry
@@ -80,21 +83,21 @@ func (r *Repository) Save(ctx context.Context, entity infra.Persistent) error {
 	return nil
 }
 
-func (r *Repository) Load(ctx context.Context, entityType, id string) (infra.Persistent, error) {
+func (r *Repository) Load(ctx context.Context, id, entityType string) (infra.Persistent, error) {
 	// Try to load from snapshot first
-	entity, err := r.snapshotStore.LoadSnapshot(ctx, entityType, id)
+	entity, err := r.snapshotStore.LoadSnapshot(ctx, id, entityType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load snapshot: %w", err)
 	}
 
 	persistent, ok := entity.(infra.Persistent)
 	if !ok {
-		return nil, fmt.Errorf("entity %s/%s does not implement Persistent", entityType, id)
+		return nil, fmt.Errorf("entity %s/%s does not implement Persistent", id, entityType)
 	}
 
 	// Load and apply deltas if any exist
 	snapshotVersion := persistent.Version()
-	deltas, err := r.deltaStore.LoadDeltas(ctx, entityType, id, snapshotVersion)
+	deltas, err := r.deltaStore.LoadDeltas(ctx, id, entityType, snapshotVersion)
 	if err != nil {
 		// No deltas is OK, just return snapshot
 		return persistent, nil
@@ -111,15 +114,25 @@ func (r *Repository) Load(ctx context.Context, entityType, id string) (infra.Per
 	return persistent, nil
 }
 
-func (r *Repository) Delete(ctx context.Context, entityType, id string) error {
-	// TODO: Implement deletion from both snapshot and delta stores
-	// This requires adding Delete methods to SnapshotStore and DeltaStore interfaces
-	return fmt.Errorf("Delete not yet implemented")
+func (r *Repository) Delete(ctx context.Context, id, entityType string) error {
+	if err := r.deltaStore.DeleteDeltas(ctx, id, entityType); err != nil {
+		return fmt.Errorf("failed to delete deltas: %w", err)
+	}
+
+	if err := r.snapshotStore.DeleteSnapshots(ctx, id, entityType); err != nil {
+		return fmt.Errorf("failed to delete snapshots: %w", err)
+	}
+
+	if err := r.snapshotStore.DeleteMetadata(ctx, id, entityType); err != nil {
+		return fmt.Errorf("failed to delete metadata: %w", err)
+	}
+
+	return nil
 }
 
-func (r *Repository) Exists(ctx context.Context, entityType, id string) (bool, error) {
+func (r *Repository) Exists(ctx context.Context, id, entityType string) (bool, error) {
 	// Check if entity has at least one snapshot
-	snapshots, err := r.snapshotStore.ListSnapshots(ctx, entityType, id)
+	snapshots, err := r.snapshotStore.ListSnapshots(ctx, id, entityType)
 	if err != nil {
 		return false, err
 	}
@@ -128,56 +141,58 @@ func (r *Repository) Exists(ctx context.Context, entityType, id string) (bool, e
 }
 
 func (r *Repository) List(ctx context.Context, criteria persistence.QueryCriteria) ([]infra.Persistent, error) {
-	// TODO: Implement listing with filtering
-	// This requires querying entity_metadata table and loading each entity
-	return nil, fmt.Errorf("List not yet implemented")
-}
+	builder := dbx.ST.
+		Select("entity_id").
+		From("entity_metadata").
+		Where(squirrel.Eq{"entity_type": criteria.EntityType})
 
-// SnapshotStrategy determines when to create full snapshots
-type SnapshotStrategy interface {
-	ShouldSnapshot(currentVersion int64, deltaCount int, totalDeltaSize int64) bool
-}
-
-// EveryNVersionsStrategy creates snapshot every N versions
-type EveryNVersionsStrategy struct {
-	interval int64
-}
-
-func NewEveryNVersionsStrategy(interval int64) SnapshotStrategy {
-	return &EveryNVersionsStrategy{interval: interval}
-}
-
-func (s *EveryNVersionsStrategy) ShouldSnapshot(currentVersion int64, deltaCount int, totalDeltaSize int64) bool {
-	return currentVersion%s.interval == 0
-}
-
-// DeltaSizeStrategy creates snapshot when deltas exceed size threshold
-type DeltaSizeStrategy struct {
-	maxSize int64
-}
-
-func NewDeltaSizeStrategy(maxSize int64) SnapshotStrategy {
-	return &DeltaSizeStrategy{maxSize: maxSize}
-}
-
-func (s *DeltaSizeStrategy) ShouldSnapshot(currentVersion int64, deltaCount int, totalDeltaSize int64) bool {
-	return totalDeltaSize > s.maxSize
-}
-
-// HybridStrategy combines multiple strategies
-type HybridStrategy struct {
-	strategies []SnapshotStrategy
-}
-
-func NewHybridStrategy(strategies ...SnapshotStrategy) SnapshotStrategy {
-	return &HybridStrategy{strategies: strategies}
-}
-
-func (s *HybridStrategy) ShouldSnapshot(currentVersion int64, deltaCount int, totalDeltaSize int64) bool {
-	for _, strategy := range s.strategies {
-		if strategy.ShouldSnapshot(currentVersion, deltaCount, totalDeltaSize) {
-			return true
-		}
+	for key, value := range criteria.Filters {
+		builder = builder.Where(squirrel.Eq{key: value})
 	}
-	return false
+
+	if criteria.OrderBy != "" {
+		builder = builder.OrderBy(criteria.OrderBy)
+	}
+
+	if criteria.Limit > 0 {
+		builder = builder.Limit(uint64(criteria.Limit))
+	}
+	if criteria.Offset > 0 {
+		builder = builder.Offset(uint64(criteria.Offset))
+	}
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build list query: %w", err)
+	}
+
+	rows, err := r.db.Conn().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list entities: %w", err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	var result []infra.Persistent
+
+	for _, id := range ids {
+		var obj infra.Persistent
+		obj, err = r.Load(ctx, criteria.EntityType, id)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, obj)
+	}
+
+	return result, nil
 }

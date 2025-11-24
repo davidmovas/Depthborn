@@ -47,10 +47,10 @@ func (s *SnapshotStore) SaveSnapshot(ctx context.Context, entity infra.Snapshott
 
 	query, args, err := dbx.ST.
 		Insert("snapshots").
-		Columns("entity_type", "entity_id", "version", "timestamp", "data", "size").
-		Values(entity.Type(), entity.ID(), version, timestamp, data, len(data)).
+		Columns("entity_id", "entity_type", "version", "timestamp", "data", "size").
+		Values(entity.ID(), entity.Type(), version, timestamp, data, len(data)).
 		Suffix(`
-			ON CONFLICT(entity_type, entity_id, version) 
+			ON CONFLICT(entity_id, entity_type, version) 
 			DO UPDATE SET 
 				timestamp = excluded.timestamp,
 				data = excluded.data,
@@ -71,14 +71,14 @@ func (s *SnapshotStore) SaveSnapshot(ctx context.Context, entity infra.Snapshott
 	return s.updateMetadata(ctx, entity, version, timestamp)
 }
 
-func (s *SnapshotStore) LoadSnapshot(ctx context.Context, entityType, id string) (infra.Snapshottable, error) {
+func (s *SnapshotStore) LoadSnapshot(ctx context.Context, id, entityType string) (infra.Snapshottable, error) {
 	// Get latest snapshot
 	query, args, err := dbx.ST.
 		Select("version", "data").
 		From("snapshots").
 		Where(squirrel.Eq{
-			"entity_type": entityType,
 			"entity_id":   id,
+			"entity_type": entityType,
 		}).
 		OrderBy("version DESC").
 		Limit(1).
@@ -113,13 +113,13 @@ func (s *SnapshotStore) LoadSnapshot(ctx context.Context, entityType, id string)
 	return entity, nil
 }
 
-func (s *SnapshotStore) ListSnapshots(ctx context.Context, entityType, id string) ([]persistence.SnapshotMetadata, error) {
+func (s *SnapshotStore) ListSnapshots(ctx context.Context, id, entityType string) ([]persistence.SnapshotMetadata, error) {
 	query, args, err := dbx.ST.
-		Select("entity_type", "entity_id", "version", "timestamp", "size").
+		Select("entity_id", "entity_type", "version", "timestamp", "size").
 		From("snapshots").
 		Where(squirrel.Eq{
-			"entity_type": entityType,
 			"entity_id":   id,
+			"entity_type": entityType,
 		}).
 		OrderBy("version DESC").
 		ToSql()
@@ -141,8 +141,8 @@ func (s *SnapshotStore) ListSnapshots(ctx context.Context, entityType, id string
 	for rows.Next() {
 		var meta persistence.SnapshotMetadata
 		if err = rows.Scan(
-			&meta.EntityType,
 			&meta.EntityID,
+			&meta.EntityType,
 			&meta.Version,
 			&meta.Timestamp,
 			&meta.Size,
@@ -159,6 +159,44 @@ func (s *SnapshotStore) ListSnapshots(ctx context.Context, entityType, id string
 	return snapshots, nil
 }
 
+func (s *SnapshotStore) DeleteSnapshots(ctx context.Context, id, entityType string) error {
+	query, args, err := dbx.ST.
+		Delete("snapshots").
+		Where(squirrel.Eq{
+			"entity_id":   id,
+			"entity_type": entityType,
+		}).ToSql()
+
+	if err != nil {
+		return fmt.Errorf("failed to build delete snapshots query: %w", err)
+	}
+
+	_, err = s.db.conn.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to delete snapshots: %w", err)
+	}
+	return nil
+}
+
+func (s *SnapshotStore) DeleteMetadata(ctx context.Context, id, entityType string) error {
+	query, args, err := dbx.ST.
+		Delete("entity_metadata").
+		Where(squirrel.Eq{
+			"entity_id":   id,
+			"entity_type": entityType,
+		}).ToSql()
+
+	if err != nil {
+		return fmt.Errorf("failed to build delete metadata query: %w", err)
+	}
+
+	_, err = s.db.conn.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to delete metadata: %w", err)
+	}
+	return nil
+}
+
 func (s *SnapshotStore) updateMetadata(ctx context.Context, entity infra.Identity, version, timestamp int64) error {
 	createdAt := timestamp
 	if timestamped, ok := entity.(infra.Timestamped); ok {
@@ -167,10 +205,10 @@ func (s *SnapshotStore) updateMetadata(ctx context.Context, entity infra.Identit
 
 	query, args, err := dbx.ST.
 		Insert("entity_metadata").
-		Columns("entity_type", "entity_id", "current_version", "created_at", "updated_at").
-		Values(entity.Type(), entity.ID(), version, createdAt, timestamp).
+		Columns("entity_id", "entity_type", "current_version", "created_at", "updated_at").
+		Values(entity.ID(), entity.Type(), version, createdAt, timestamp).
 		Suffix(`
-			ON CONFLICT(entity_type, entity_id)
+			ON CONFLICT(entity_id, entity_type)
 			DO UPDATE SET
 				current_version = excluded.current_version,
 				updated_at = excluded.updated_at

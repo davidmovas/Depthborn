@@ -21,13 +21,13 @@ func NewDeltaStore(db *DB) *DeltaStore {
 	}
 }
 
-func (d *DeltaStore) SaveDelta(ctx context.Context, entityType, id string, fromVersion, toVersion int64, delta []byte) error {
+func (d *DeltaStore) SaveDelta(ctx context.Context, id, entityType string, fromVersion, toVersion int64, delta []byte) error {
 	query, args, err := dbx.ST.
 		Insert("deltas").
-		Columns("entity_type", "entity_id", "from_version", "to_version", "timestamp", "data").
-		Values(entityType, id, fromVersion, toVersion, squirrel.Expr("strftime('%s', 'now')"), delta).
+		Columns("entity_id", "entity_type", "from_version", "to_version", "timestamp", "data").
+		Values(id, entityType, fromVersion, toVersion, squirrel.Expr("strftime('%s', 'now')"), delta).
 		Suffix(`
-			ON CONFLICT(entity_type, entity_id, from_version, to_version)
+			ON CONFLICT(entity_id, entity_type, from_version, to_version)
 			DO UPDATE SET
 				timestamp = excluded.timestamp,
 				data = excluded.data
@@ -46,13 +46,13 @@ func (d *DeltaStore) SaveDelta(ctx context.Context, entityType, id string, fromV
 	return nil
 }
 
-func (d *DeltaStore) LoadDeltas(ctx context.Context, entityType, id string, fromVersion int64) ([]persistence.Delta, error) {
+func (d *DeltaStore) LoadDeltas(ctx context.Context, id, entityType string, fromVersion int64) ([]persistence.Delta, error) {
 	query, args, err := dbx.ST.
 		Select("from_version", "to_version", "data", "timestamp").
 		From("deltas").
 		Where(squirrel.And{
-			squirrel.Eq{"entity_type": entityType},
 			squirrel.Eq{"entity_id": id},
+			squirrel.Eq{"entity_type": entityType},
 			squirrel.GtOrEq{"from_version": fromVersion},
 		}).
 		OrderBy("from_version ASC").
@@ -92,7 +92,7 @@ func (d *DeltaStore) LoadDeltas(ctx context.Context, entityType, id string, from
 	return deltas, nil
 }
 
-func (d *DeltaStore) CompactDeltas(ctx context.Context, entityType, id string, upToVersion int64) error {
+func (d *DeltaStore) CompactDeltas(ctx context.Context, id, entityType string, upToVersion int64) error {
 	tx, err := d.db.BeginTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -104,8 +104,8 @@ func (d *DeltaStore) CompactDeltas(ctx context.Context, entityType, id string, u
 	query, args, err := dbx.ST.
 		Delete("deltas").
 		Where(squirrel.And{
-			squirrel.Eq{"entity_type": entityType},
 			squirrel.Eq{"entity_id": id},
+			squirrel.Eq{"entity_type": entityType},
 			squirrel.LtOrEq{"to_version": upToVersion},
 		}).
 		ToSql()
@@ -135,13 +135,13 @@ func (d *DeltaStore) CompactDeltas(ctx context.Context, entityType, id string, u
 }
 
 // GetDeltaCount returns number of deltas for entity
-func (d *DeltaStore) GetDeltaCount(ctx context.Context, entityType, id string) (int, error) {
+func (d *DeltaStore) GetDeltaCount(ctx context.Context, id, entityType string) (int, error) {
 	query, args, err := dbx.ST.
 		Select("COUNT(*)").
 		From("deltas").
 		Where(squirrel.Eq{
-			"entity_type": entityType,
 			"entity_id":   id,
+			"entity_type": entityType,
 		}).
 		ToSql()
 
@@ -159,13 +159,13 @@ func (d *DeltaStore) GetDeltaCount(ctx context.Context, entityType, id string) (
 }
 
 // GetTotalDeltaSize returns total size of deltas for entity
-func (d *DeltaStore) GetTotalDeltaSize(ctx context.Context, entityType, id string) (int64, error) {
+func (d *DeltaStore) GetTotalDeltaSize(ctx context.Context, id, entityType string) (int64, error) {
 	query, args, err := dbx.ST.
 		Select("COALESCE(SUM(LENGTH(data)), 0)").
 		From("deltas").
 		Where(squirrel.Eq{
-			"entity_type": entityType,
 			"entity_id":   id,
+			"entity_type": entityType,
 		}).
 		ToSql()
 
@@ -180,4 +180,23 @@ func (d *DeltaStore) GetTotalDeltaSize(ctx context.Context, entityType, id strin
 	}
 
 	return size, nil
+}
+
+func (d *DeltaStore) DeleteDeltas(ctx context.Context, id, entityType string) error {
+	query, args, err := dbx.ST.
+		Delete("deltas").
+		Where(squirrel.Eq{
+			"entity_id":   id,
+			"entity_type": entityType,
+		}).ToSql()
+
+	if err != nil {
+		return fmt.Errorf("failed to build delete deltas query: %w", err)
+	}
+
+	_, err = d.db.conn.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to delete deltas: %w", err)
+	}
+	return nil
 }
