@@ -111,6 +111,8 @@ type CurveFormula interface {
 
 // AttributeGrowth manages attribute increases on level up
 type AttributeGrowth interface {
+	infra.Serializable
+
 	// GetGrowth returns attribute growth per level
 	GetGrowth(attributeType string) float64
 
@@ -186,6 +188,8 @@ type StatPointCallback func(ctx context.Context, attributeType string, manager S
 
 // SkillPointManager manages skill point allocation
 type SkillPointManager interface {
+	infra.Serializable
+
 	// AvailablePoints returns unspent skill points
 	AvailablePoints() int
 
@@ -451,6 +455,8 @@ const (
 
 // Manager coordinates all progression systems
 type Manager interface {
+	infra.Serializable
+
 	// Experience returns experience manager
 	Experience() ExperienceManager
 

@@ -14,6 +14,11 @@ type State struct {
 	path string
 }
 
+type Pair struct {
+	Key   string
+	Value any
+}
+
 func New() *State {
 	return &State{data: make(map[string]any), path: "root"}
 }
@@ -105,6 +110,32 @@ func (s *State) Set(key string, value any) *State {
 	return s
 }
 
+func (s *State) Batch(pair Pair, pairs ...Pair) *State {
+	s.Set(pair.Key, pair.Value)
+	for _, p := range pairs {
+		s.Set(p.Key, p.Value)
+	}
+	return s
+}
+
+func BatchKV(kv ...any) (map[string]any, error) {
+	state := New()
+
+	if len(kv)%2 != 0 {
+		return nil, fmt.Errorf("odd number of arguments: expected key/value pairs")
+	}
+
+	for i := 0; i < len(kv); i += 2 {
+		key, ok := kv[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("key at position %d is not string", i)
+		}
+		state.Set(key, kv[i+1])
+	}
+
+	return state.Data(), nil
+}
+
 func (s *State) SetAll(values map[string]any) *State {
 	for k, v := range values {
 		s.data[k] = v
@@ -130,6 +161,14 @@ func (s *State) Clone() *State {
 		newData[k] = v
 	}
 	return &State{data: newData, path: s.path}
+}
+
+func Set(key string, value any) *State {
+	return New().Set(key, value)
+}
+
+func Batch(pair Pair, pairs ...Pair) *State {
+	return New().Batch(pair, pairs...)
 }
 
 func Assign(s *State, targets map[string]any) error {

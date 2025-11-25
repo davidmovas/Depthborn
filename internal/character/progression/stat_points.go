@@ -213,13 +213,11 @@ func (m *BaseStatPointManager) SerializeState() (map[string]any, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	s := state.New().
+	return state.New().
 		Set("available_points", m.availablePoints).
 		Set("spent_points", m.spentPoints).
 		Set("allocations", m.GetAllocations()).
-		Set("points_per_level", m.pointsPerLevel)
-
-	return s.Data(), nil
+		Set("points_per_level", m.pointsPerLevel).Data(), nil
 }
 
 func (m *BaseStatPointManager) DeserializeState(stateData map[string]any) error {
