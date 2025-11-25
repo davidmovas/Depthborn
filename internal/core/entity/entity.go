@@ -13,7 +13,6 @@ import (
 // Entity represents any game object in the world
 type Entity interface {
 	infra.Persistent
-	types.Identity
 	types.Named
 	types.Leveled
 	types.Tagged
@@ -33,27 +32,6 @@ type Entity interface {
 
 	// Callbacks returns callback registry
 	Callbacks() types.CallbackRegistry
-}
-
-// AttributeManager manages entity attributes (forward declaration)
-type AttributeManager interface {
-	// Get returns current attribute value
-	Get(attrType attribute.Type) float64
-
-	// GetBase returns base attribute value
-	GetBase(attrType attribute.Type) float64
-
-	// SetBase sets base attribute value
-	SetBase(attrType attribute.Type, value float64)
-
-	// AddModifier adds attribute modifier
-	AddModifier(attrType attribute.Type, modifier attribute.Modifier)
-
-	// RemoveModifier removes attribute modifier
-	RemoveModifier(attrType attribute.Type, modifierID string)
-
-	// RecalculateAll recalculates all attributes
-	RecalculateAll()
 }
 
 // Living represents entities with health

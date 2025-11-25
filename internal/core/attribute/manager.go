@@ -140,6 +140,29 @@ func (m *BaseManager) Snapshot() map[Type]float64 {
 	return snapshot
 }
 
+func (m *BaseManager) Restore(snapshot map[Type]float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	existingModifiers := m.modifiers
+	existingFormulas := m.formulas
+
+	m.baseValues = make(map[Type]float64)
+	m.modifiers = existingModifiers
+	m.formulas = existingFormulas
+	m.cache = make(map[Type]float64)
+	m.dirty = make(map[Type]bool)
+
+	for attr, value := range snapshot {
+		m.baseValues[attr] = value
+		m.dirty[attr] = true
+	}
+
+	for attr := range m.formulas {
+		m.dirty[attr] = true
+	}
+}
+
 func (m *BaseManager) SetFormula(attr Type, formula Formula) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -72,6 +72,9 @@ type Manager interface {
 
 	// Snapshot creates snapshot of all attributes
 	Snapshot() map[Type]float64
+
+	// Restore restores attributes from snapshot
+	Restore(snapshot map[Type]float64)
 }
 
 // Modifier changes attribute value

@@ -1,7 +1,11 @@
 package spatial
 
+import "github.com/davidmovas/Depthborn/internal/infra"
+
 // Transform represents complete spatial state
 type Transform interface {
+	infra.Serializable
+
 	// Position returns current position
 	Position() Position
 

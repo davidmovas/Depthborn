@@ -1,6 +1,9 @@
 package spatial
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 var _ Transform = (*BaseTransform)(nil)
 
@@ -73,4 +76,32 @@ func (t *BaseTransform) InRange(other Transform, maxDistance float64) bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.position.InRange(other.Position(), maxDistance)
+}
+
+func (t *BaseTransform) SerializeState() (map[string]any, error) {
+	positionState, err := t.position.SerializeState()
+	if err != nil {
+		return nil, err
+	}
+	state := map[string]any{
+		"position": positionState,
+		"facing":   float64(t.facing),
+	}
+	return state, nil
+}
+
+func (t *BaseTransform) DeserializeState(state map[string]any) error {
+	if statePosition, ok := state["position"].(map[string]any); !ok {
+		return fmt.Errorf("invalid position state: %v", state["position"])
+	} else {
+		if err := t.position.DeserializeState(statePosition); err != nil {
+			return err
+		}
+	}
+	if facing, ok := state["facing"].(float64); !ok {
+		return fmt.Errorf("invalid facing state: %v", state["facing"])
+	} else {
+		t.facing = Facing(facing)
+	}
+	return nil
 }

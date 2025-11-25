@@ -1,6 +1,13 @@
 package spatial
 
-import "math"
+import (
+	"fmt"
+	"math"
+
+	"github.com/davidmovas/Depthborn/internal/infra"
+)
+
+var _ infra.Serializable = (*Position)(nil)
 
 // Position represents location in 3D space
 type Position struct {
@@ -98,6 +105,28 @@ func (p Position) AngleTo(other Position) float64 {
 	dx := float64(other.X - p.X)
 	dy := float64(other.Y - p.Y)
 	return math.Atan2(dy, dx)
+}
+
+func (p Position) SerializeState() (map[string]any, error) {
+	return map[string]any{
+		"x": p.X,
+		"y": p.Y,
+		"z": p.Z,
+	}, nil
+}
+
+func (p Position) DeserializeState(state map[string]any) error {
+	var ok bool
+	if p.X, ok = state["x"].(int); !ok {
+		return fmt.Errorf("invalid position x: %v", state["x"])
+	}
+	if p.Y, ok = state["y"].(int); !ok {
+		return fmt.Errorf("invalid position y: %v", state["y"])
+	}
+	if p.Z, ok = state["z"].(int); !ok {
+		return fmt.Errorf("invalid position z: %v", state["z"])
+	}
+	return nil
 }
 
 // Direction represents movement vector

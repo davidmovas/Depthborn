@@ -2,10 +2,14 @@ package progression
 
 import (
 	"context"
+
+	"github.com/davidmovas/Depthborn/internal/infra"
 )
 
 // ExperienceManager manages character experience and leveling
 type ExperienceManager interface {
+	infra.Serializable
+
 	// CurrentLevel returns current level
 	CurrentLevel() int
 
@@ -138,6 +142,8 @@ const (
 
 // StatPointManager manages allocatable stat points
 type StatPointManager interface {
+	infra.Serializable
+
 	// AvailablePoints returns unspent stat points
 	AvailablePoints() int
 
