@@ -33,7 +33,6 @@ func NewCombatant(config CombatantConfig) *BaseCombatant {
 	}
 }
 
-// Combatant interface
 func (c *BaseCombatant) Attack(ctx context.Context, targetID string) (CombatResult, error) {
 	if !c.IsAlive() {
 		return CombatResult{}, fmt.Errorf("dead entities cannot attack")
@@ -170,7 +169,6 @@ func (c *BaseCombatant) rollHit(targetEvasion float64) bool {
 	return true
 }
 
-// Serializable overrides
 func (c *BaseCombatant) SerializeState() (map[string]any, error) {
 	state, err := c.BaseLiving.SerializeState()
 	if err != nil {
