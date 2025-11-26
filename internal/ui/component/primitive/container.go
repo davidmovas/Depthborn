@@ -1,61 +1,51 @@
 package primitive
 
 import (
-	"github.com/charmbracelet/lipgloss"
 	"github.com/davidmovas/Depthborn/internal/ui/component"
 	"github.com/davidmovas/Depthborn/internal/ui/style"
 )
 
-func Container(props ContainerProps) component.Component {
+// Box is a generic container with layout control
+func Box(props ContainerProps) component.Component {
 	return component.Func(func(ctx *component.Context) string {
-		childrenOutput := ""
-		for _, child := range props.Children {
-			childrenOutput += child.Render(ctx)
-		}
+		content := RenderChildren(ctx, props.Children)
 
-		result := childrenOutput
-		if props.Style != nil {
-			result = props.Style.Render(result)
-		}
+		s := style.New()
+		s = ApplyAllProps(s, props.LayoutProps, props.StyleProps, props.ContentProps)
 
-		return result
+		return s.Render(content)
 	})
 }
 
-func Box(props ContainerProps) component.Component {
-	baseStyle := lipgloss.NewStyle()
+// Panel renders styled panel container
+func Panel(props ContainerProps) component.Component {
+	baseStyle := style.Merge(
+		style.Bg(style.Grey100),
+		style.P(1),
+		style.Br(),
+	)
 
-	// Применяем размеры если указаны
-	if props.Width != nil {
-		baseStyle = baseStyle.Width(*props.Width)
+	if props.StyleProps.Style != nil {
+		baseStyle = baseStyle.Inherit(*props.StyleProps.Style)
 	}
-	if props.Height != nil {
-		baseStyle = baseStyle.Height(*props.Height)
-	}
-	if props.Padding != nil {
-		baseStyle = baseStyle.Padding(*props.Padding)
-	}
-	if props.Margin != nil {
-		baseStyle = baseStyle.Margin(*props.Margin)
-	}
-	if props.Style != nil {
-		baseStyle = baseStyle.Inherit(*props.Style)
-	}
+	props.StyleProps.Style = &baseStyle
 
-	props.Style = &baseStyle
-	return Container(props)
+	return Box(props)
 }
 
-func Panel(props ContainerProps) component.Component {
-	panelStyle := lipgloss.NewStyle().
-		Background(style.Grey100).
-		Padding(1).
-		Border(lipgloss.RoundedBorder())
+// Card renders card container
+func Card(props ContainerProps) component.Component {
+	baseStyle := style.Merge(
+		style.Bg(style.White),
+		style.P(2),
+		style.Br(),
+		style.BrColor(style.New(), style.Grey300),
+	)
 
-	if props.Style != nil {
-		panelStyle = panelStyle.Inherit(*props.Style)
+	if props.StyleProps.Style != nil {
+		baseStyle = baseStyle.Inherit(*props.StyleProps.Style)
 	}
+	props.StyleProps.Style = &baseStyle
 
-	props.Style = &panelStyle
 	return Box(props)
 }

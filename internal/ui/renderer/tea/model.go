@@ -9,24 +9,29 @@ import (
 	"github.com/davidmovas/Depthborn/internal/ui/renderer"
 )
 
-// Model bridges component system with BubbleTea
+// Model bridges component system with BubbleTea with modal support
 type Model struct {
 	navigator       *navigation.Navigator
 	lastTick        time.Time
-	width           int
-	height          int
+	width, height   int
 	renderDebounce  *renderer.Debouncer
 	program         *tea.Program
-	screenContexts  map[string]*component.Context // Optimized: cache per screen
+	screenContexts  map[string]*component.Context
 	currentFocusCtx *component.FocusContext
+
+	// Modal & Portal support
+	portalManager *component.PortalManager
+	modalManager  *component.ModalManager
 }
 
-// NewModel creates new BubbleTea model
+// NewModel creates new BubbleTea model with modal support
 func NewModel(navigator *navigation.Navigator) *Model {
 	m := &Model{
 		navigator:      navigator,
 		lastTick:       time.Now(),
 		screenContexts: make(map[string]*component.Context, 20),
+		portalManager:  component.NewPortalManager(),
+		modalManager:   component.NewModalManager(),
 	}
 
 	// Setup debounced re-render (16ms = ~60fps max)
@@ -51,13 +56,12 @@ func (m *Model) RequestRender() {
 
 // Init implements tea.Model.Init
 func (m *Model) Init() tea.Cmd {
-	// Start ticker for updates
 	return tea.Batch(
 		tickCmd(),
 	)
 }
 
-// Update implements tea.Model.Update
+// Update implements tea.Model.Update with modal-aware input handling
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch message := msg.(type) {
 
@@ -70,6 +74,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "esc":
+			// If modal is open, close modal instead of going back
+			if m.modalManager.HasModals() {
+				m.modalManager.Pop()
+				m.portalManager.Unregister(m.modalManager.Top())
+				return m, nil
+			}
+
+			// Otherwise navigate back
 			if err := m.navigator.Back(); err != nil {
 				if m.navigator.StackSize() <= 1 {
 					return m, tea.Quit
@@ -101,6 +113,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = message.Width
 		m.height = message.Height
+
+		// Update screen size in all cached contexts
+		for _, ctx := range m.screenContexts {
+			ctx.SetScreenSize(m.width, m.height)
+		}
+
 		return m, nil
 
 	case tickMsg:
@@ -119,7 +137,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View implements tea.Model.View
+// View implements tea.Model.View with layered rendering
 func (m *Model) View() string {
 	screen := m.navigator.Current()
 	if screen == nil {
@@ -132,19 +150,51 @@ func (m *Model) View() string {
 	// Clear and re-register components
 	m.currentFocusCtx.ClearFocusables()
 
-	// Create context with focus context already set
+	// Clear portals before rendering
+	m.portalManager.Clear()
+
+	// Create context with all managers
 	ctx := m.createContextForScreen(screen)
 
-	// Render screen (components will register themselves)
+	// Set screen size
+	ctx.SetScreenSize(m.width, m.height)
+
+	// Set portal and modal managers
+	ctx.SetPortalManager(m.portalManager)
+	ctx.SetModalManager(m.modalManager)
+
+	// Render main screen content
 	comp := screen.Render(ctx)
 	if comp == nil {
 		return ""
 	}
 
-	// Render to string (triggers registration)
-	rendered := comp.Render(ctx)
+	mainContent := comp.Render(ctx)
 
-	return rendered
+	// Render portal layers on top
+	modalContent := m.portalManager.Render(ctx, component.LayerModal)
+	toastContent := m.portalManager.Render(ctx, component.LayerToast)
+	tooltipContent := m.portalManager.Render(ctx, component.LayerTooltip)
+
+	// Combine layers
+	result := mainContent
+
+	if modalContent != "" {
+		// Overlay modal on top of main content
+		result = overlayContent(result, modalContent, m.width, m.height)
+	}
+
+	if toastContent != "" {
+		// Position toasts at bottom
+		result = appendContent(result, toastContent)
+	}
+
+	if tooltipContent != "" {
+		// Position tooltips at cursor (simplified: append for now)
+		result = appendContent(result, tooltipContent)
+	}
+
+	return result
 }
 
 // ensureFocusContext ensures focus context exists for current screen
@@ -177,6 +227,22 @@ func (m *Model) createContextForScreen(screen navigation.Screen) *component.Cont
 
 	m.screenContexts[screenID] = ctx
 	return ctx
+}
+
+// overlayContent overlays modal content on top of base content
+// Creates dimmed background effect
+func overlayContent(base, overlay string, width, height int) string {
+	// For now, simple append - can be improved with actual overlay logic
+	// TODO: Implement proper z-index layering with background dimming
+	return base + "\n" + overlay
+}
+
+// appendContent appends content below base
+func appendContent(base, append string) string {
+	if append == "" {
+		return base
+	}
+	return base + "\n" + append
 }
 
 // tickMsg is sent periodically for updates

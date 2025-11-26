@@ -421,10 +421,3 @@ var (
 	RadiusLg   = 3
 	RadiusFull = 999
 )
-
-var (
-	TextSm   = 0
-	TextBase = 0
-	TextLg   = 0
-	TextXl   = 0
-)

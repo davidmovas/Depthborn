@@ -4,25 +4,14 @@ import (
 	"strings"
 
 	"github.com/davidmovas/Depthborn/internal/ui/component"
-	"github.com/davidmovas/Depthborn/internal/ui/style"
 )
 
-type SpacerProps struct {
-	CommonProps
-	Width  *int
-	Height *int
-	Size   *int
-}
-
-func Spacer(props SpacerProps) component.Component {
+// Spacer renders empty space
+func Spacer(props LayoutProps) component.Component {
 	return component.Func(func(ctx *component.Context) string {
 		width := 1
 		height := 1
 
-		if props.Size != nil {
-			width = *props.Size
-			height = *props.Size
-		}
 		if props.Width != nil {
 			width = *props.Width
 		}
@@ -39,33 +28,18 @@ func Spacer(props SpacerProps) component.Component {
 			content = strings.Join(lines, "\n")
 		}
 
-		if props.Style != nil {
-			content = props.Style.Render(content)
-		}
-
 		return content
 	})
 }
 
-func HSpacer(props CommonProps) component.Component {
-	return Spacer(SpacerProps{
-		CommonProps: props,
-		Width:       ptr(style.Space4),
-		Height:      ptr(1),
-	})
+// HSpacer renders horizontal spacer
+func HSpacer(width int) component.Component {
+	w := width
+	return Spacer(LayoutProps{Width: &w})
 }
 
-func VSpacer(props CommonProps) component.Component {
-	return Spacer(SpacerProps{
-		CommonProps: props,
-		Width:       ptr(1),
-		Height:      ptr(style.Space2),
-	})
-}
-
-func FlexSpacer(props CommonProps) component.Component {
-	return Spacer(SpacerProps{
-		CommonProps: props,
-		Width:       ptr(0),
-	})
+// VSpacer renders vertical spacer
+func VSpacer(height int) component.Component {
+	h := height
+	return Spacer(LayoutProps{Height: &h})
 }
