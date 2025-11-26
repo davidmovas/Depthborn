@@ -58,6 +58,10 @@ func (ctx *Context) Child(componentID string) *Context {
 	}
 }
 
+func (ctx *Context) Context() context.Context {
+	return ctx.ctx
+}
+
 // ResetHookIndex resets hook counter before each render
 func (ctx *Context) ResetHookIndex() {
 	ctx.mu.Lock()
