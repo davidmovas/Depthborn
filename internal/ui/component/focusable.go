@@ -1,5 +1,10 @@
 package component
 
+import (
+	"fmt"
+	"math/rand/v2"
+)
+
 // FocusableComponent wraps any component to make it focusable
 type FocusableComponent struct {
 	component Component
@@ -9,9 +14,6 @@ type FocusableComponent struct {
 
 // FocusableConfig configures focusable behavior
 type FocusableConfig struct {
-	// Unique ID for this focusable (REQUIRED - must be stable across renders)
-	ID string
-
 	// 2D position for spatial navigation (nil = linear only)
 	Position *FocusPosition
 
@@ -38,14 +40,10 @@ type FocusableConfig struct {
 
 // MakeFocusable wraps component to make it focusable
 func MakeFocusable(comp Component, config FocusableConfig) *FocusableComponent {
-	if config.ID == "" {
-		panic("FocusableConfig.ID is required and must be stable across renders")
-	}
-
 	return &FocusableComponent{
+		id:        generateID(),
 		component: comp,
 		config:    config,
-		id:        config.ID,
 	}
 }
 
@@ -112,4 +110,8 @@ func (fc *FocusableComponent) OnActivate() bool {
 
 func (fc *FocusableComponent) IsInputComponent() bool {
 	return fc.config.IsInput
+}
+
+func generateID() string {
+	return fmt.Sprintf("comp__%d", rand.IntN(9_999_999))
 }

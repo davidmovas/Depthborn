@@ -1,76 +1,75 @@
 package primitive
 
 import (
-	"fmt"
-
 	"github.com/davidmovas/Depthborn/internal/ui/component"
+	"github.com/davidmovas/Depthborn/internal/ui/style"
 )
 
-// ButtonConfig configures button component
-type ButtonConfig struct {
-	// Button label
+type ButtonProps struct {
+	// Required fields
 	Label string
 
-	// Hotkeys for activation (can be multiple)
-	Hotkeys []string
+	// Optional fields
+	Hotkeys   []string
+	Position  *component.FocusPosition
+	OnClick   func()
+	OnFocus   func(string) string
+	AutoFocus *bool
+	Class     *string
 
-	// Single hotkey (shorthand for Hotkeys: []string{Key})
-	Key string
-
-	// 2D position for navigation (optional)
-	Position *component.FocusPosition
-
-	// Click handler
-	OnClick func()
-
-	// Custom ID (REQUIRED - must be stable, e.g. "btn_new_game")
-	ID string
-
-	// Whether this button should be auto-focused
-	AutoFocus bool
+	// Styling
+	Style      *style.Style
+	FocusStyle *style.Style
 }
 
 // Button creates a focusable button component
-func Button(config ButtonConfig) component.Component {
-	if config.ID == "" {
-		panic("Button requires stable ID (e.g. 'btn_new_game')")
+func Button(props ButtonProps) component.Component {
+	hotkeys := props.Hotkeys
+
+	autoFocus := false
+	if props.AutoFocus != nil {
+		autoFocus = *props.AutoFocus
 	}
 
-	// Merge Key into Hotkeys if provided
-	hotkeys := config.Hotkeys
-	if config.Key != "" {
-		hotkeys = append(hotkeys, config.Key)
+	var baseComp component.Component
+	if props.Style != nil {
+		baseComp = Text(props.Label, *props.Style)
+	} else {
+		baseComp = Text(props.Label)
 	}
 
-	// Create display text
-	hotkeyText := ""
-	if len(hotkeys) > 0 {
-		hotkeyText = fmt.Sprintf("[%s] ", hotkeys[0])
+	var focusedStyleFunc func(string) string
+	if props.OnFocus != nil {
+		focusedStyleFunc = props.OnFocus
+	} else if props.FocusStyle != nil {
+		focusedStyleFunc = func(content string) string {
+			return props.FocusStyle.Render(content)
+		}
+	} else if props.Style != nil {
+		focusedStyleFunc = func(content string) string {
+			return props.Style.Render(content)
+		}
+	} else {
+		focusedStyleFunc = func(content string) string {
+			return content
+		}
 	}
-	displayText := hotkeyText + config.Label
 
-	// Create base text component
-	baseComp := Text(displayText)
-
-	// Wrap with focusable
 	return component.MakeFocusable(baseComp, component.FocusableConfig{
-		ID:        config.ID,
-		Position:  config.Position,
+		Position:  props.Position,
 		Hotkeys:   hotkeys,
 		CanFocus:  true,
-		AutoFocus: config.AutoFocus,
+		AutoFocus: autoFocus,
 		IsInput:   false,
 
 		OnActivateCallback: func() bool {
-			if config.OnClick != nil {
-				config.OnClick()
+			if props.OnClick != nil {
+				props.OnClick()
 				return true
 			}
 			return false
 		},
 
-		FocusedStyle: func(content string) string {
-			return "> " + content + " <"
-		},
+		FocusedStyle: focusedStyleFunc,
 	})
 }
