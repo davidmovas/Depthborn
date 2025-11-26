@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-// State represents stateful value with setter
+// State represents a reactive state value with setter
 type State[T any] struct {
 	value T
 	set   func(T)
@@ -16,36 +16,30 @@ func (s State[T]) Value() T {
 	return s.value
 }
 
-// Set updates state value
+// Set updates state value and triggers re-render
 func (s State[T]) Set(newValue T) {
 	s.set(newValue)
 }
 
 // UseState creates or retrieves stateful value
-// With explicit key (preferred for clarity and safety)
-//
-// Example:
-//
-//	health := UseState(ctx, 100,  "health")
-//	health.Set(health.Value() + 10)
 func UseState[T any](ctx *Context, initial T, key ...string) *State[T] {
 	hookKey := ctx.generateHookKey(key...)
 
-	state, exists := ctx.getHook(hookKey)
-	if !exists || !state.initialized {
-		// Initialize state
-		state = &hookState{
-			value:       initial,
-			initialized: true,
+	state, exists := ctx.GetHook(hookKey)
+	if !exists || !state.Initialized {
+		state = &HookState{
+			Value:       initial,
+			Initialized: true,
 		}
-		ctx.setHook(hookKey, state)
+		ctx.SetHook(hookKey, state)
 	}
 
-	value := state.value.(T)
+	value := state.Value.(T)
 
 	setter := func(newValue T) {
-		state.value = newValue
-		ctx.setHook(hookKey, state)
+		state.Value = newValue
+		ctx.SetHook(hookKey, state)
+		ctx.TriggerStateChange()
 	}
 
 	return &State[T]{
@@ -55,67 +49,38 @@ func UseState[T any](ctx *Context, initial T, key ...string) *State[T] {
 }
 
 // UseEffect runs side effect when dependencies change
-// - If deps is nil/empty: runs on every render
-// - If deps provided: runs only when deps change
-// - On first render: always runs
-//
-// Example:
-//
-//	UseEffect(ctx, "log_health", func() {
-//	    fmt.Println("Health:", health.Value())
-//	}, health.Value())
 func UseEffect(ctx *Context, effect func(), deps []any, key ...string) {
 	hookKey := ctx.generateHookKey(key...)
 
-	// Check if dependencies changed
-	shouldRun := ctx.dependenciesChanged(hookKey, deps)
-
-	if shouldRun {
-		// Run effect
+	if ctx.dependenciesChanged(hookKey, deps) {
 		effect()
-
-		// Store dependencies
-		state := &hookState{
-			dependencies: deps,
-			initialized:  true,
+		state := &HookState{
+			Dependencies: deps,
+			Initialized:  true,
 		}
-		ctx.setHook(hookKey, state)
+		ctx.SetHook(hookKey, state)
 	}
 }
 
-// UseMemo memoize expensive computation
-// Recomputes only when dependencies change
-//
-// Example:
-//
-//	expensive := UseMemo(ctx, "calc", func() int {
-//	    return complexCalculation()
-//	}, dep1, dep2)
+// UseMemo memoizes expensive computation
 func UseMemo[T any](ctx *Context, compute func() T, deps []any, key ...string) T {
 	hookKey := ctx.generateHookKey(key...)
 
-	state, exists := ctx.getHook(hookKey)
-
-	// Check if we need to recompute
+	state, exists := ctx.GetHook(hookKey)
 	shouldCompute := !exists || ctx.dependenciesChanged(hookKey, deps)
 
 	if shouldCompute {
-		// Compute new value
 		value := compute()
-
-		// Store value and dependencies
-		state = &hookState{
-			value:        value,
-			dependencies: deps,
-			initialized:  true,
+		state = &HookState{
+			Value:        value,
+			Dependencies: deps,
+			Initialized:  true,
 		}
-		ctx.setHook(hookKey, state)
-
+		ctx.SetHook(hookKey, state)
 		return value
 	}
 
-	// Return cached value
-	return state.value.(T)
+	return state.Value.(T)
 }
 
 // Ref holds mutable reference that persists across renders
@@ -124,39 +89,24 @@ type Ref[T any] struct {
 }
 
 // UseRef creates persistent mutable reference
-// Unlike useState, changing ref doesn't trigger re-render
-//
-// Example:
-//
-//	counter := UseRef(ctx, "counter", 0)
-//	counter.Current++ // doesn't trigger re-render
 func UseRef[T any](ctx *Context, initial T, key ...string) *Ref[T] {
 	hookKey := ctx.generateHookKey(key...)
 
-	state, exists := ctx.getHook(hookKey)
-	if !exists || !state.initialized {
+	state, exists := ctx.GetHook(hookKey)
+	if !exists || !state.Initialized {
 		ref := &Ref[T]{Current: initial}
-		state = &hookState{
-			value:       ref,
-			initialized: true,
+		state = &HookState{
+			Value:       ref,
+			Initialized: true,
 		}
-		ctx.setHook(hookKey, state)
+		ctx.SetHook(hookKey, state)
 	}
 
-	return state.value.(*Ref[T])
+	return state.Value.(*Ref[T])
 }
 
 // UseCallback memoizes callback function
-// Returns same function instance when dependencies don't change
-// Useful for preventing unnecessary re-renders of child components
-//
-// Example:
-//
-//	onClick := UseCallback(ctx, "on_click", func() {
-//	    handleClick(id)
-//	}, id)
 func UseCallback[T any](ctx *Context, callback T, deps []any, key ...string) T {
-	// Validate that callback is a function
 	callbackType := reflect.TypeOf(callback)
 	if callbackType.Kind() != reflect.Func {
 		panic(fmt.Sprintf("UseCallback: callback must be a function, got %T", callback))

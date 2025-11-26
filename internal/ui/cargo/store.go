@@ -7,16 +7,28 @@ import (
 )
 
 var cargo = &cargoStore{
-	data: make(map[string]any),
-	mu:   sync.RWMutex{},
+	data:      make(map[string]any),
+	observers: make([]ObserverFunc, 0),
+	mu:        sync.RWMutex{},
+}
+
+// ObserverFunc is called when cargo state changes
+// key: the key that was modified
+// value: the new value
+type ObserverFunc func(key string, value any)
+
+// AddObserver registers global observer for cargo state changes
+// Observer is called whenever any key is modified via Set()
+func AddObserver(obs ObserverFunc) {
+	cargo.addObserver(obs)
 }
 
 type cargoStore struct {
-	data map[string]any
-	mu   sync.RWMutex
+	data      map[string]any
+	observers []ObserverFunc
+	mu        sync.RWMutex
 }
 
-// get retrieves value by key
 func (s *cargoStore) get(key string) (any, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -24,21 +36,24 @@ func (s *cargoStore) get(key string) (any, bool) {
 	return val, ok
 }
 
-// set stores value by key
 func (s *cargoStore) set(key string, value any) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.data[key] = value
+	observers := make([]ObserverFunc, len(s.observers))
+	copy(observers, s.observers)
+	s.mu.Unlock()
+
+	for _, obs := range observers {
+		obs(key, value)
+	}
 }
 
-// delete removes value by key
 func (s *cargoStore) delete(key string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.data, key)
 }
 
-// has checks if key exists
 func (s *cargoStore) has(key string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -46,14 +61,18 @@ func (s *cargoStore) has(key string) bool {
 	return ok
 }
 
-// clear removes all values
 func (s *cargoStore) clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.data = make(map[string]any)
 }
 
-// typeKey generates key from type T for global instances
+func (s *cargoStore) addObserver(obs ObserverFunc) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.observers = append(s.observers, obs)
+}
+
 func typeKey[T any]() string {
 	var zero T
 	t := reflect.TypeOf(zero)

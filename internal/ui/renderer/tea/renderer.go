@@ -2,6 +2,7 @@ package tea
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/davidmovas/Depthborn/internal/ui/cargo"
 	"github.com/davidmovas/Depthborn/internal/ui/component"
 	"github.com/davidmovas/Depthborn/internal/ui/navigation"
 	"github.com/davidmovas/Depthborn/internal/ui/renderer"
@@ -34,12 +35,20 @@ func (r *Renderer) Init() error {
 	// Create model
 	r.model = NewModel(r.navigator)
 
+	//cargo observer to trigger re-renders
+	cargo.AddObserver(func(_ string, _ any) {
+		r.model.RequestRender()
+	})
+
 	// Create program
 	r.program = tea.NewProgram(
 		r.model,
 		tea.WithAltScreen(),       // Use alternate screen buffer
 		tea.WithMouseCellMotion(), // Enable mouse support (optional)
 	)
+
+	// Set program reference in model (for sending messages)
+	r.model.SetProgram(r.program)
 
 	return nil
 }
@@ -49,7 +58,6 @@ func (r *Renderer) Run() error {
 	if r.program == nil {
 		return ErrNotInitialized
 	}
-
 	_, err := r.program.Run()
 	return err
 }
@@ -69,17 +77,16 @@ func (r *Renderer) Render(comp component.Component) error {
 	if r.program == nil {
 		return ErrNotInitialized
 	}
-
-	// Send render message to trigger update
-	r.program.Send(RenderCmd())
+	// Trigger debounced render
+	r.model.RequestRender()
 
 	return nil
 }
 
 // RequestRender implements renderer.Renderer.RequestRender
 func (r *Renderer) RequestRender() {
-	if r.program != nil {
-		r.program.Send(RenderCmd())
+	if r.model != nil {
+		r.model.RequestRender()
 	}
 }
 

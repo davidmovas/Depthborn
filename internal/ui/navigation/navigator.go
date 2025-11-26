@@ -127,17 +127,6 @@ func (n *Navigator) Update(dt time.Duration) {
 	current.OnUpdateEnd()
 }
 
-// HandleInput forwards input to current screen
-// Returns true if input was handled
-func (n *Navigator) HandleInput(msg any) bool {
-	current := n.stack.Peek()
-	if current == nil {
-		return false
-	}
-
-	return current.HandleInput(msg)
-}
-
 // Registry returns the screen registry
 func (n *Navigator) Registry() *Registry {
 	return n.registry

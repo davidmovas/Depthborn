@@ -6,95 +6,71 @@ import (
 	"github.com/davidmovas/Depthborn/internal/ui/component"
 )
 
+// ButtonConfig configures button component
 type ButtonConfig struct {
-	Label    string
-	Key      string // Key to press (e.g. "A", "Enter", "Esc")
-	OnClick  func()
-	Disabled bool
-	Style    ButtonStyle
+	// Button label
+	Label string
+
+	// Hotkeys for activation (can be multiple)
+	Hotkeys []string
+
+	// Single hotkey (shorthand for Hotkeys: []string{Key})
+	Key string
+
+	// 2D position for navigation (optional)
+	Position *component.FocusPosition
+
+	// Click handler
+	OnClick func()
+
+	// Custom ID (REQUIRED - must be stable, e.g. "btn_new_game")
+	ID string
+
+	// Whether this button should be auto-focused
+	AutoFocus bool
 }
 
-type ButtonStyle string
-
-const (
-	ButtonStyleDefault   ButtonStyle = "default"
-	ButtonStylePrimary   ButtonStyle = "primary"
-	ButtonStyleDanger    ButtonStyle = "danger"
-	ButtonStyleSecondary ButtonStyle = "secondary"
-)
-
-// Button creates button component
-// In terminal UI, buttons are just text labels with key hints
-// The actual key handling is done in Screen.HandleInput()
-//
-// Example:
-//
-//	Button("Attack", "A", func() { /* handle click */ })
+// Button creates a focusable button component
 func Button(config ButtonConfig) component.Component {
-	return &button{config: config}
-}
-
-type button struct {
-	config ButtonConfig
-}
-
-func (b *button) Render(ctx *component.Context) string {
-	label := b.config.Label
-	key := b.config.Key
-
-	// Format: [A] Attack
-	if b.config.Disabled {
-		// Gray out disabled buttons
-		return fmt.Sprintf("[-] %s", label)
+	if config.ID == "" {
+		panic("Button requires stable ID (e.g. 'btn_new_game')")
 	}
 
-	// Apply style coloring
-	var color string
-	switch b.config.Style {
-	case ButtonStylePrimary:
-		color = "cyan"
-	case ButtonStyleDanger:
-		color = "red"
-	case ButtonStyleSecondary:
-		color = "gray"
-	default:
-		color = "white"
+	// Merge Key into Hotkeys if provided
+	hotkeys := config.Hotkeys
+	if config.Key != "" {
+		hotkeys = append(hotkeys, config.Key)
 	}
 
-	// Render with key hint
-	keyPart := fmt.Sprintf("[%s]", key)
+	// Create display text
+	hotkeyText := ""
+	if len(hotkeys) > 0 {
+		hotkeyText = fmt.Sprintf("[%s] ", hotkeys[0])
+	}
+	displayText := hotkeyText + config.Label
 
-	// Use styled text for coloring
-	styledLabel := TextStyled(label, TextStyle{Color: color})
-	styledKey := TextStyled(keyPart, TextStyle{Color: "yellow", Bold: true})
+	// Create base text component
+	baseComp := Text(displayText)
 
-	return styledKey.Render(ctx) + " " + styledLabel.Render(ctx)
-}
+	// Wrap with focusable
+	return component.MakeFocusable(baseComp, component.FocusableConfig{
+		ID:        config.ID,
+		Position:  config.Position,
+		Hotkeys:   hotkeys,
+		CanFocus:  true,
+		AutoFocus: config.AutoFocus,
+		IsInput:   false,
 
-// SimpleButton creates button without key hint (for list selection, etc.)
-func SimpleButton(label string, onClick func()) component.Component {
-	return Button(ButtonConfig{
-		Label:   label,
-		OnClick: onClick,
-	})
-}
+		OnActivateCallback: func() bool {
+			if config.OnClick != nil {
+				config.OnClick()
+				return true
+			}
+			return false
+		},
 
-// PrimaryButton creates primary styled button
-func PrimaryButton(label string, key string, onClick func()) component.Component {
-	return Button(ButtonConfig{
-		Label:   label,
-		Key:     key,
-		OnClick: onClick,
-		Style:   ButtonStylePrimary,
-	})
-}
-
-// DangerButton creates danger styled button (for destructive actions)
-func DangerButton(label string, key string, onClick func()) component.Component {
-	return Button(ButtonConfig{
-		Label:   label,
-		Key:     key,
-		OnClick: onClick,
-		Style:   ButtonStyleDanger,
+		FocusedStyle: func(content string) string {
+			return "> " + content + " <"
+		},
 	})
 }
