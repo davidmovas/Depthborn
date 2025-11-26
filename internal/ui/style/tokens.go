@@ -387,6 +387,8 @@ var (
 
 	SurfaceColor        = Grey50
 	SurfaceVariantColor = Grey100
+
+	Transparent = lipgloss.Color(" #00000000")
 )
 
 var (

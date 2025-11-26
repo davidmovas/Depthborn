@@ -4,92 +4,103 @@ import (
 	"strings"
 
 	"github.com/davidmovas/Depthborn/internal/ui/component"
+	"github.com/davidmovas/Depthborn/internal/ui/style"
 )
 
-// Divider creates horizontal divider line
-func Divider(width int) component.Component {
-	return &divider{
-		width: width,
-		char:  "─",
-	}
+type DividerProps struct {
+	CommonProps
+	Length *int
+	Char   *string
+	Label  *string
 }
 
-type divider struct {
-	width int
-	char  string
+func Divider(props DividerProps) component.Component {
+	return component.Func(func(ctx *component.Context) string {
+		length := 20
+		if props.Length != nil {
+			length = *props.Length
+		}
+
+		char := "─"
+		if props.Char != nil {
+			char = *props.Char
+		}
+
+		dividerStyle := style.Merge(
+			style.Fg(style.Grey400),
+			style.Dim,
+		)
+
+		if props.Label != nil {
+			return renderLabeledDivider(*props.Label, length, char, dividerStyle, props)
+		}
+
+		content := strings.Repeat(char, length)
+
+		if props.Style != nil {
+			dividerStyle = dividerStyle.Inherit(*props.Style)
+		}
+
+		return dividerStyle.Render(content)
+	})
 }
 
-func (d *divider) Render(ctx *component.Context) string {
-	if d.width <= 0 {
-		d.width = 40 // default width
+func renderLabeledDivider(label string, length int, char string, baseStyle style.Style, props DividerProps) string {
+	labelStyle := style.Merge(
+		style.Fg(style.Grey600),
+		style.Bold,
+		style.PaddingX1,
+	)
+
+	renderedLabel := labelStyle.Render(" " + label + " ")
+	labelWidth := style.CalculateWidth(renderedLabel)
+
+	sideLength := (length - labelWidth) / 2
+	if sideLength < 1 {
+		sideLength = 1
 	}
-	return strings.Repeat(d.char, d.width)
+
+	leftLine := strings.Repeat(char, sideLength)
+	rightLine := strings.Repeat(char, sideLength)
+
+	content := leftLine + renderedLabel + rightLine
+
+	dividerStyle := baseStyle
+	if props.Style != nil {
+		dividerStyle = dividerStyle.Inherit(*props.Style)
+	}
+
+	return dividerStyle.Render(content)
 }
 
-// DividerDouble creates double-line divider
-func DividerDouble(width int) component.Component {
-	return &divider{
-		width: width,
-		char:  "═",
-	}
-}
+func VDivider(props DividerProps) component.Component {
+	return component.Func(func(ctx *component.Context) string {
+		height := 5
+		if props.Length != nil {
+			height = *props.Length
+		}
 
-// DividerThick creates thick divider
-func DividerThick(width int) component.Component {
-	return &divider{
-		width: width,
-		char:  "━",
-	}
-}
+		char := "│"
+		if props.Char != nil {
+			char = *props.Char
+		}
 
-// DividerDotted creates dotted divider
-func DividerDotted(width int) component.Component {
-	return &divider{
-		width: width,
-		char:  "·",
-	}
-}
+		lines := make([]string, height)
+		for i := range lines {
+			lines[i] = char
+		}
 
-// DividerCustom creates divider with custom character
-func DividerCustom(width int, char string) component.Component {
-	return &divider{
-		width: width,
-		char:  char,
-	}
-}
+		content := strings.Join(lines, "\n")
 
-// DividerWithText creates divider with text in the middle
-// Example: ───── Title ─────
-func DividerWithText(width int, text string) component.Component {
-	return &dividerWithText{
-		width: width,
-		text:  text,
-	}
-}
+		dividerStyle := style.Merge(
+			style.Fg(style.Grey400),
+			style.Dim,
+		)
 
-type dividerWithText struct {
-	width int
-	text  string
-}
+		if props.Style != nil {
+			dividerStyle = dividerStyle.Inherit(*props.Style)
+		}
 
-func (d *dividerWithText) Render(ctx *component.Context) string {
-	if d.width <= 0 {
-		d.width = 40
-	}
-
-	textLen := len(d.text)
-	if textLen >= d.width-4 {
-		// Not enough space, just return text
-		return d.text
-	}
-
-	// Calculate padding
-	totalPad := d.width - textLen - 2 // -2 for spaces around text
-	leftPad := totalPad / 2
-	rightPad := totalPad - leftPad
-
-	left := strings.Repeat("─", leftPad)
-	right := strings.Repeat("─", rightPad)
-
-	return left + " " + d.text + " " + right
+		return dividerStyle.Render(content)
+	})
 }

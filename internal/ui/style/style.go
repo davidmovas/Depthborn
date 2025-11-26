@@ -5,6 +5,9 @@ import "github.com/charmbracelet/lipgloss"
 // Style represents a lipgloss style
 type Style = lipgloss.Style
 
+// New creates a new style
+func New() Style { return lipgloss.NewStyle() }
+
 // Color represents a terminal color
 type Color = lipgloss.TerminalColor
 

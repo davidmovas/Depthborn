@@ -54,7 +54,6 @@ func (m *Model) Init() tea.Cmd {
 	// Start ticker for updates
 	return tea.Batch(
 		tickCmd(),
-		tea.EnterAltScreen, // Use alternate screen buffer
 	)
 }
 

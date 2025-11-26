@@ -341,7 +341,7 @@ func (g *GradientBuilder) BorderGradientBox(content string, borderStyle ...BoxBo
 	// Calculate width using clean text (without ANSI) with proper rune width calculation
 	width := 0
 	for _, line := range lines {
-		cleanLine := stripAnsi(line)
+		cleanLine := StripAnsi(line)
 		lineWidth := runewidth.StringWidth(cleanLine)
 		if lineWidth > width {
 			width = lineWidth
@@ -385,7 +385,7 @@ func (g *GradientBuilder) BorderGradientBox(content string, borderStyle ...BoxBo
 
 		if i < len(lines) {
 			line := lines[i]
-			cleanLine := stripAnsi(line)
+			cleanLine := StripAnsi(line)
 			lineWidth := runewidth.StringWidth(cleanLine)
 
 			// Write the original line (with styles)
@@ -417,6 +417,11 @@ func (g *GradientBuilder) BorderGradientBox(content string, borderStyle ...BoxBo
 // Colors return an array of interpolated colors
 func (g *GradientBuilder) Colors(steps int) []Color {
 	return g.generate(steps)
+}
+
+// CalculateWidth calculates width of content string based on rune width
+func CalculateWidth(content string) int {
+	return runewidth.StringWidth(StripAnsi(content))
 }
 
 // ForegroundStyle returns an array of styles with gradient for foreground
@@ -487,8 +492,8 @@ func GradientStyles(baseStyle Style, steps int, applyTo string, colors ...Color)
 	return NewGradient(colors...).Styles(baseStyle, steps, applyTo)
 }
 
-// stripAnsi removes all ANSI escape codes from string
-func stripAnsi(s string) string {
+// StripAnsi removes all ANSI escape codes from string
+func StripAnsi(s string) string {
 	ansiPattern := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 	return ansiPattern.ReplaceAllString(s, "")
 }
