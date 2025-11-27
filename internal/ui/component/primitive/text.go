@@ -16,20 +16,25 @@ func Text(props TextProps) component.Component {
 
 // Heading renders heading text
 func Heading(props TextProps) component.Component {
-	props.StyleProps.Style = style.S(
+	styles := []style.Style{
 		style.Bold,
 		style.Fg(style.Grey900),
-		*props.StyleProps.Style,
-	)
+	}
+	if props.StyleProps.Style != nil {
+		styles = append(styles, *props.StyleProps.Style)
+	}
+	props.StyleProps.Style = style.S(styles...)
 	return Text(props)
 }
 
 // Label renders label text
 func Label(props TextProps) component.Component {
-	props.StyleProps.Style = style.S(
-		style.Fg(style.Grey700),
-		*props.StyleProps.Style,
-	)
+	if props.StyleProps.Style != nil {
+		props.StyleProps.Style = style.S(
+			style.Fg(style.Grey700),
+			*props.StyleProps.Style,
+		)
+	}
 	return Text(props)
 }
 
