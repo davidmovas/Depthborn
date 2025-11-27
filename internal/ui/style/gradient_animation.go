@@ -2,7 +2,7 @@ package style
 
 import (
 	"github.com/davidmovas/Depthborn/internal/ui/component"
-	"github.com/davidmovas/Depthborn/internal/ui/component/layout"
+	"github.com/davidmovas/Depthborn/internal/ui/component/utils"
 )
 
 // AnimatedGradient creates animated gradient colors by rotating them
@@ -131,12 +131,12 @@ func getAnimationFrame(ctx *component.Context) int {
 
 	frameState := component.UseState(ctx, 0)
 
-	animController := component.UseState(ctx, (*layout.AnimationController)(nil))
+	animController := component.UseState(ctx, (*utils.AnimationController)(nil))
 
 	// Initialize controller if needed
 	if animController.Value() == nil {
 		// Создаём контроллер с коллбеком который обновляет state
-		controller := layout.NewAnimationController(func() {
+		controller := utils.NewAnimationController(func() {
 			// Обновляем state чтобы вызвать ререндер
 			frameState.Set(frameState.Value() + 1)
 		})

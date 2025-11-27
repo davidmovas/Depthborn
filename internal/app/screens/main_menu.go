@@ -17,5 +17,5 @@ func NewMainMenuScreen() navigation.Screen {
 }
 
 func (m *mainMenuScreen) Render(ctx *component.Context) component.Component {
-	return components.ExampleFormModal(ctx)
+	return components.ExampleProgressModal(ctx)
 }
