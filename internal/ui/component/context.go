@@ -1,174 +1,127 @@
 package component
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"sync"
 )
 
-// HooksContainer can store and retrieve hooks (implemented by Screen)
-type HooksContainer interface {
-	SetHook(key string, state *HookState)
-	GetHook(key string) (*HookState, bool)
+// Context provides component rendering context
+type Context struct {
+	componentID   string
+	parent        *Context
+	navigator     any // Navigator reference
+	focusContext  *FocusContext
+	portalContext *PortalContext
+
+	// Hook state
+	hooks     map[string]*HookState
+	hookIndex int
+	hookMu    sync.RWMutex
+
+	// Meta data
+	meta   map[string]any
+	metaMu sync.RWMutex
+
+	// Dirty tracking for optimization
+	dirty   bool
+	dirtyMu sync.RWMutex
+
+	// State change callback
+	onStateChange func(componentID string)
 }
 
-// HookState stores hook-specific state (exported for Screen storage)
+// HookState stores hook-specific state
 type HookState struct {
 	Value        any
 	Dependencies []any
 	Initialized  bool
 }
 
-// Context holds state and metadata during component rendering
-// Used for hooks (useState, useEffect, etc.) and focus management
-// Context holds rendering state and metadata for component tree
-type Context struct {
-	ctx           context.Context
-	componentID   string
-	hookIndex     int
-	hooks         map[string]*HookState
-	parent        *Context
-	meta          map[string]any
-	focusCtx      *FocusContext
-	onStateChange func()
-	mu            sync.RWMutex
-}
-
-// NewContext creates a new render context
-func NewContext(componentID string) *Context {
+// NewContext creates new context
+func NewContext(id string, navigator any) *Context {
 	return &Context{
-		componentID:   componentID,
+		componentID:   id,
+		navigator:     navigator,
+		focusContext:  NewFocusContext(generateID()),
+		portalContext: NewPortalContext(),
 		hooks:         make(map[string]*HookState),
 		meta:          make(map[string]any),
-		ctx:           context.Background(),
-		onStateChange: func() {},
+		dirty:         true, // Initially dirty
 	}
 }
 
-// Child creates a child context for nested components
-func (ctx *Context) Child(componentID string) *Context {
-	return &Context{
+// Child creates child context
+func (ctx *Context) Child(childID string) *Context {
+	child := &Context{
+		componentID:   childID,
 		parent:        ctx,
-		componentID:   componentID,
+		navigator:     ctx.navigator,
+		focusContext:  ctx.focusContext,  // Shared focus context
+		portalContext: ctx.portalContext, // Shared portal context
 		hooks:         make(map[string]*HookState),
 		meta:          make(map[string]any),
-		ctx:           ctx.ctx,
+		dirty:         true,
 		onStateChange: ctx.onStateChange,
 	}
+	return child
 }
 
-func (ctx *Context) Context() context.Context {
-	return ctx.ctx
-}
-
-// ResetHookIndex resets hook counter before each render
-func (ctx *Context) ResetHookIndex() {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-	ctx.hookIndex = 0
-}
-
-// SetHook stores hook state with container support
+// SetHook stores hook state
 func (ctx *Context) SetHook(key string, state *HookState) {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-
-	if container, ok := ctx.meta["__hooks_container"].(HooksContainer); ok {
-		container.SetHook(key, state)
-		return
-	}
-
+	ctx.hookMu.Lock()
+	defer ctx.hookMu.Unlock()
 	ctx.hooks[key] = state
 }
 
-// GetHook retrieves hook state with container support
+// GetHook retrieves hook state
 func (ctx *Context) GetHook(key string) (*HookState, bool) {
-	ctx.mu.RLock()
-	defer ctx.mu.RUnlock()
+	ctx.hookMu.RLock()
+	defer ctx.hookMu.RUnlock()
+	state, exists := ctx.hooks[key]
+	return state, exists
+}
 
-	if container, ok := ctx.meta["__hooks_container"].(HooksContainer); ok {
-		return container.GetHook(key)
+// GetFocusContext returns focus context (accessor method)
+func (ctx *Context) GetFocusContext() *FocusContext {
+	return ctx.focusContext
+}
+
+// SetFocusContext sets focus context (for portal isolation)
+func (ctx *Context) SetFocusContext(focusContext *FocusContext) {
+	ctx.focusContext = focusContext
+}
+
+// generateHookKey creates unique hook key
+func (ctx *Context) generateHookKey(key ...string) string {
+	ctx.hookMu.Lock()
+	defer ctx.hookMu.Unlock()
+
+	var hookKey string
+	if len(key) > 0 {
+		hookKey = fmt.Sprintf("%s_hook_%s", ctx.componentID, key[0])
+	} else {
+		hookKey = fmt.Sprintf("%s_hook_%d", ctx.componentID, ctx.hookIndex)
+		ctx.hookIndex++
 	}
-
-	state, ok := ctx.hooks[key]
-	return state, ok
+	return hookKey
 }
 
-// SetHooksContainer links context to external hooks storage
-func (ctx *Context) SetHooksContainer(container HooksContainer) {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-	ctx.meta["__hooks_container"] = container
-}
-
-// TriggerStateChange requests component re-render
-func (ctx *Context) TriggerStateChange() {
-	ctx.mu.RLock()
-	callback := ctx.onStateChange
-	ctx.mu.RUnlock()
-
-	if callback != nil {
-		callback()
-	}
-}
-
-// SetOnStateChange sets re-render callback
-func (ctx *Context) SetOnStateChange(callback func()) {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-	ctx.onStateChange = callback
-}
-
-// FocusContext returns focus management context
-func (ctx *Context) FocusContext() *FocusContext {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-
-	if ctx.focusCtx == nil {
-		ctx.focusCtx = NewFocusContext(ctx.componentID)
-	}
-	return ctx.focusCtx
-}
-
-// SetFocusContext sets focus context from parent
-func (ctx *Context) SetFocusContext(focusCtx *FocusContext) {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-	ctx.focusCtx = focusCtx
-}
-
-// generateHookKey creates unique key for hook
-// Uses component ID + hook identifier (key or index)
-func (ctx *Context) generateHookKey(identifier ...string) string {
-	if len(identifier) == 0 {
-		return fmt.Sprintf("hook_%s__%d", ctx.componentID, ctx.nextHookIndex())
-	}
-	return fmt.Sprintf("hook__%s__%s", ctx.componentID, identifier[0])
-}
-
-// dependenciesChanged checks if dependencies have changed
-func (ctx *Context) dependenciesChanged(key string, newDeps []any) bool {
-	state, exists := ctx.GetHook(key)
+// dependenciesChanged checks if dependencies have changed (DEEP comparison)
+func (ctx *Context) dependenciesChanged(hookKey string, deps []any) bool {
+	state, exists := ctx.GetHook(hookKey)
 	if !exists {
 		return true
 	}
 
 	oldDeps := state.Dependencies
-
-	// If no old deps, consider changed
-	if oldDeps == nil {
+	if len(oldDeps) != len(deps) {
 		return true
 	}
 
-	// If length different, changed
-	if len(oldDeps) != len(newDeps) {
-		return true
-	}
-
-	// Compare each dependency
-	for i := range oldDeps {
-		if !deepEqual(oldDeps[i], newDeps[i]) {
+	// Deep compare values, not pointers
+	for i := range deps {
+		if !deepEqual(oldDeps[i], deps[i]) {
 			return true
 		}
 	}
@@ -176,15 +129,97 @@ func (ctx *Context) dependenciesChanged(key string, newDeps []any) bool {
 	return false
 }
 
-func (ctx *Context) nextHookIndex() int {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
+// deepEqual compares values deeply (not pointer addresses)
+func deepEqual(a, b any) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
 
-	index := ctx.hookIndex
-	ctx.hookIndex++
-	return index
+	// Use reflect.DeepEqual for proper value comparison
+	return reflect.DeepEqual(a, b)
 }
 
-func deepEqual(a, b any) bool {
-	return reflect.DeepEqual(a, b)
+// TriggerStateChange marks component as dirty and notifies system
+func (ctx *Context) TriggerStateChange() {
+	ctx.MarkDirty()
+
+	if ctx.onStateChange != nil {
+		ctx.onStateChange(ctx.componentID)
+	}
+}
+
+// MarkDirty marks this component as needing re-render
+func (ctx *Context) MarkDirty() {
+	ctx.dirtyMu.Lock()
+	ctx.dirty = true
+	ctx.dirtyMu.Unlock()
+
+	// Mark parent dirty too (bubble up)
+	if ctx.parent != nil {
+		ctx.parent.MarkDirty()
+	}
+}
+
+// IsDirty returns whether component needs re-render
+func (ctx *Context) IsDirty() bool {
+	ctx.dirtyMu.RLock()
+	defer ctx.dirtyMu.RUnlock()
+	return ctx.dirty
+}
+
+// ClearDirty marks component as clean
+func (ctx *Context) ClearDirty() {
+	ctx.dirtyMu.Lock()
+	ctx.dirty = false
+	ctx.dirtyMu.Unlock()
+}
+
+// SetStateChangeCallback sets callback for state changes
+func (ctx *Context) SetStateChangeCallback(callback func(componentID string)) {
+	ctx.onStateChange = callback
+}
+
+// FocusContext returns focus context
+func (ctx *Context) FocusContext() *FocusContext {
+	return ctx.focusContext
+}
+
+// PortalContext returns portal context
+func (ctx *Context) PortalContext() *PortalContext {
+	return ctx.portalContext
+}
+
+// Navigator returns navigator reference
+func (ctx *Context) Navigator() any {
+	return ctx.navigator
+}
+
+// ComponentID returns current component ID
+func (ctx *Context) ComponentID() string {
+	return ctx.componentID
+}
+
+// Get retrieves metadata value
+func (ctx *Context) Get(key string) (any, bool) {
+	ctx.metaMu.RLock()
+	defer ctx.metaMu.RUnlock()
+	val, ok := ctx.meta[key]
+	return val, ok
+}
+
+// Set stores metadata value
+func (ctx *Context) Set(key string, value any) {
+	ctx.metaMu.Lock()
+	defer ctx.metaMu.Unlock()
+	ctx.meta[key] = value
+}
+
+// ResetHookIndex resets hook index (call before render)
+func (ctx *Context) ResetHookIndex() {
+	ctx.hookMu.Lock()
+	ctx.hookIndex = 0
+	ctx.hookMu.Unlock()
 }

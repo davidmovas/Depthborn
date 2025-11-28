@@ -47,8 +47,8 @@ func (s ScreenSize) IsTall() bool {
 
 // ScreenSize returns current screen dimensions
 func (ctx *Context) ScreenSize() ScreenSize {
-	ctx.mu.RLock()
-	defer ctx.mu.RUnlock()
+	ctx.metaMu.RLock()
+	defer ctx.metaMu.RUnlock()
 
 	if size, ok := ctx.meta["__screen_size"].(ScreenSize); ok {
 		return size
@@ -61,8 +61,8 @@ func (ctx *Context) ScreenSize() ScreenSize {
 // SetScreenSize updates screen dimensions
 // Should be called by renderer when window resizes
 func (ctx *Context) SetScreenSize(width, height int) {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
+	ctx.metaMu.Lock()
+	defer ctx.metaMu.Unlock()
 
 	ctx.meta["__screen_size"] = NewScreenSize(width, height)
 }

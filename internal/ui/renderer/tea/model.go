@@ -7,256 +7,217 @@ import (
 	"github.com/davidmovas/Depthborn/internal/ui/component"
 	"github.com/davidmovas/Depthborn/internal/ui/navigation"
 	"github.com/davidmovas/Depthborn/internal/ui/renderer"
+	"github.com/davidmovas/Depthborn/internal/ui/renderer/vdom"
 )
 
-// Model bridges component system with BubbleTea with modal support
+// Model implements tea.Model with VDOM optimization
 type Model struct {
-	navigator       *navigation.Navigator
-	lastTick        time.Time
-	width, height   int
-	renderDebounce  *renderer.Debouncer
-	program         *tea.Program
-	screenContexts  map[string]*component.Context
-	currentFocusCtx *component.FocusContext
+	navigator   *navigation.Navigator
+	rootContext *component.Context
+	vdom        *vdom.VDOM
 
-	// Modal & Portal support
-	portalManager *component.PortalManager
-	modalManager  *component.ModalManager
+	// FPS control
+	targetFPS     int
+	frameDuration time.Duration
+	lastFrameTime time.Time
+
+	// Cached output
+	lastOutput string
+	width      int
+	height     int
+
+	// BubbleTea program reference
+	program *tea.Program
+
+	// Debouncer for state changes
+	debouncer *renderer.Debouncer
 }
 
-// NewModel creates new BubbleTea model with modal support
-func NewModel(navigator *navigation.Navigator) *Model {
+// NewModel creates new model
+func NewModel(nav *navigation.Navigator) *Model {
 	m := &Model{
-		navigator:      navigator,
-		lastTick:       time.Now(),
-		screenContexts: make(map[string]*component.Context, 20),
-		portalManager:  component.NewPortalManager(),
-		modalManager:   component.NewModalManager(),
+		navigator:     nav,
+		vdom:          vdom.NewVDOM(),
+		targetFPS:     60, // Default 60 FPS
+		frameDuration: time.Second / 60,
+		lastFrameTime: time.Now(),
 	}
 
-	// Setup debounced re-render (16ms = ~60fps max)
-	m.renderDebounce = renderer.NewDebouncer(16*time.Millisecond, func() {
+	// Create root context
+	m.rootContext = component.NewContext("root", nav)
+	m.rootContext.SetStateChangeCallback(func(componentID string) {
 		if m.program != nil {
-			m.program.Send(renderMsg{})
+			m.program.Send(stateChangeMsg{componentID: componentID})
 		}
+	})
+
+	// Create debouncer for state changes (16ms = 60fps)
+	m.debouncer = renderer.NewDebouncer(16*time.Millisecond, func() {
+		m.RequestRender()
 	})
 
 	return m
 }
 
-// SetProgram sets reference to tea.Program (for sending messages)
+// SetProgram sets program reference
 func (m *Model) SetProgram(p *tea.Program) {
 	m.program = p
 }
 
-// RequestRender triggers debounced re-render
-func (m *Model) RequestRender() {
-	m.renderDebounce.Call()
+// SetTargetFPS changes target framerate
+func (m *Model) SetTargetFPS(fps int) {
+	m.targetFPS = fps
+	m.frameDuration = time.Second / time.Duration(fps)
 }
 
 // Init implements tea.Model.Init
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
-		tickCmd(),
+		m.tick(),
+		tea.EnterAltScreen,
 	)
 }
 
-// Update implements tea.Model.Update with modal-aware input handling
+// Update implements tea.Model.Update
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch message := msg.(type) {
-
-	case tea.KeyMsg:
-		key := message.String()
-
-		// Global hotkeys (always work)
-		switch key {
-		case "ctrl+c", "ctrl+d":
-			return m, tea.Quit
-
-		case "esc":
-			// If modal is open, close modal instead of going back
-			if m.modalManager.HasModals() {
-				m.modalManager.Pop()
-				m.portalManager.Unregister(m.modalManager.Top())
-				return m, nil
-			}
-
-			// Otherwise navigate back
-			if err := m.navigator.Back(); err != nil {
-				if m.navigator.StackSize() <= 1 {
-					return m, tea.Quit
-				}
-			}
-			return m, nil
-		}
-
-		screen := m.navigator.Current()
-		if screen != nil {
-			// Ensure focus context exists BEFORE handling input
-			m.ensureFocusContext(screen)
-
-			// Handle key directly with stored focus context
-			if m.currentFocusCtx != nil && m.currentFocusCtx.HandleKey(key) {
-				return m, nil
-			}
-
-			// Fall back to screen's HandleInput
-			ctx := m.createContextForScreen(screen)
-			handled := screen.HandleInput(ctx, message)
-			if handled {
-				return m, nil
-			}
-		}
-
-		return m, nil
-
 	case tea.WindowSizeMsg:
 		m.width = message.Width
 		m.height = message.Height
-
-		// Update screen size in all cached contexts
-		for _, ctx := range m.screenContexts {
-			ctx.SetScreenSize(m.width, m.height)
-		}
-
+		m.rootContext.SetScreenSize(message.Width, message.Height)
 		return m, nil
 
 	case tickMsg:
+		// Calculate delta time
 		now := time.Now()
-		dt := now.Sub(m.lastTick)
-		m.lastTick = now
+		dt := now.Sub(m.lastFrameTime)
+		m.lastFrameTime = now
 
+		// Update navigator (game logic)
 		m.navigator.Update(dt)
 
-		return m, tickCmd()
+		// Schedule next tick
+		return m, m.tick()
 
-	case renderMsg:
+	case stateChangeMsg:
+		// Component state changed - debounced render
+		m.debouncer.Call()
+		return m, nil
+
+	case tea.KeyMsg:
+		return m.handleKeyPress(message)
+
+	case tea.MouseMsg:
+		return m.handleMouse(message)
+	}
+
+	return m, nil
+}
+
+// View implements tea.Model.View
+func (m *Model) View() string {
+	currentScreen := m.navigator.Current()
+	if currentScreen == nil {
+		return "No screen loaded\n"
+	}
+
+	// Reset hook index before render
+	m.rootContext.ResetHookIndex()
+
+	// Get active portal focus context (if modal is open)
+	activeFocusCtx := m.rootContext.PortalContext().GetActiveFocusContext()
+	if activeFocusCtx != nil {
+		// Modal is open - use isolated focus context
+		m.rootContext.SetFocusContext(activeFocusCtx)
+	} else {
+		// No modal - use base focus context
+		// Don't recreate context, just clear focusables for re-registration
+		m.rootContext.FocusContext().ClearFocusables()
+	}
+
+	// Render current screen
+	screenComponent := currentScreen.Render(m.rootContext)
+
+	// Build virtual tree
+	newTree := m.buildVTree(screenComponent, m.rootContext)
+
+	// Reconcile with previous tree
+	patches := m.vdom.Reconcile(newTree)
+
+	// Apply patches to cached output
+	if len(patches) > 0 {
+		m.lastOutput = vdom.ApplyPatches(m.lastOutput, patches)
+	}
+
+	// Mark context as clean after render
+	m.rootContext.ClearDirty()
+
+	return m.lastOutput
+}
+
+// buildVTree builds virtual tree from component
+func (m *Model) buildVTree(comp component.Component, ctx *component.Context) *vdom.VNode {
+	// Render component
+	content := comp.Render(ctx)
+
+	// Create node
+	node := vdom.BuildNode(
+		ctx.ComponentID(),
+		"component",
+		content,
+		nil, // Children would be tracked here for complex trees
+		nil,
+	)
+
+	return node
+}
+
+// handleKeyPress handles keyboard input
+func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Check for quit
+	if msg.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+
+	// Get active focus context (portal or base)
+	focusCtx := m.rootContext.PortalContext().GetActiveFocusContext()
+	if focusCtx == nil {
+		focusCtx = m.rootContext.FocusContext()
+	}
+
+	// Handle focus navigation
+	handled := focusCtx.HandleKey(msg.String())
+	if handled {
 		return m, nil
 	}
 
 	return m, nil
 }
 
-// View implements tea.Model.View with layered rendering
-func (m *Model) View() string {
-	screen := m.navigator.Current()
-	if screen == nil {
-		return "No active screen"
-	}
-
-	// Ensure focus context exists
-	m.ensureFocusContext(screen)
-
-	// Clear and re-register components
-	m.currentFocusCtx.ClearFocusables()
-
-	// Clear portals before rendering
-	m.portalManager.Clear()
-
-	// Create context with all managers
-	ctx := m.createContextForScreen(screen)
-
-	// Set screen size
-	ctx.SetScreenSize(m.width, m.height)
-
-	// Set portal and modal managers
-	ctx.SetPortalManager(m.portalManager)
-	ctx.SetModalManager(m.modalManager)
-
-	// Render main screen content
-	comp := screen.Render(ctx)
-	if comp == nil {
-		return ""
-	}
-
-	mainContent := comp.Render(ctx)
-
-	// Render portal layers on top
-	modalContent := m.portalManager.Render(ctx, component.LayerModal)
-	toastContent := m.portalManager.Render(ctx, component.LayerToast)
-	tooltipContent := m.portalManager.Render(ctx, component.LayerTooltip)
-
-	// Combine layers
-	result := mainContent
-
-	if modalContent != "" {
-		// Overlay modal on top of main content
-		result = overlayContent(result, modalContent, m.width, m.height)
-	}
-
-	if toastContent != "" {
-		// Position toasts at bottom
-		result = appendContent(result, toastContent)
-	}
-
-	if tooltipContent != "" {
-		// Position tooltips at cursor (simplified: append for now)
-		result = appendContent(result, tooltipContent)
-	}
-
-	return result
+// handleMouse handles mouse input
+func (m *Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	// TODO: Implement mouse handling
+	return m, nil
 }
 
-// ensureFocusContext ensures focus context exists for current screen
-func (m *Model) ensureFocusContext(screen navigation.Screen) {
-	if m.currentFocusCtx == nil || m.currentFocusCtx.Scope() != screen.ID() {
-		m.currentFocusCtx = component.NewFocusContext(screen.ID())
-	}
-}
-
-// createContextForScreen returns cached or new context for screen
-func (m *Model) createContextForScreen(screen navigation.Screen) *component.Context {
-	screenID := screen.ID()
-
-	// Use cached context if available
-	if ctx, exists := m.screenContexts[screenID]; exists {
-		ctx.ResetHookIndex()
-		return ctx
-	}
-
-	// Create and cache new context
-	ctx := component.NewContext(screenID)
-	if baseScreen, ok := screen.(*navigation.BaseScreen); ok {
-		ctx.SetHooksContainer(baseScreen)
-	}
-
-	ctx.SetOnStateChange(m.RequestRender)
-	if m.currentFocusCtx != nil {
-		ctx.SetFocusContext(m.currentFocusCtx)
-	}
-
-	m.screenContexts[screenID] = ctx
-	return ctx
-}
-
-// overlayContent overlays modal content on top of base content
-// Creates dimmed background effect
-func overlayContent(base, overlay string, width, height int) string {
-	// For now, simple append - can be improved with actual overlay logic
-	// TODO: Implement proper z-index layering with background dimming
-	return base + "\n" + overlay
-}
-
-// appendContent appends content below base
-func appendContent(base, append string) string {
-	if append == "" {
-		return base
-	}
-	return base + "\n" + append
-}
-
-// tickMsg is sent periodically for updates
-type tickMsg time.Time
-
-func tickCmd() tea.Cmd {
-	return tea.Tick(time.Millisecond*16, func(t time.Time) tea.Msg {
-		return tickMsg(t)
+// tick creates command for next frame
+func (m *Model) tick() tea.Cmd {
+	return tea.Tick(m.frameDuration, func(t time.Time) tea.Msg {
+		return tickMsg{}
 	})
 }
 
-// renderMsg requests a re-render
-type renderMsg struct{}
+// RequestRender requests immediate re-render
+func (m *Model) RequestRender() {
+	if m.program != nil {
+		m.program.Send(tickMsg{})
+	}
+}
 
-func RenderCmd() tea.Msg {
-	return renderMsg{}
+// tickMsg triggers frame update
+type tickMsg struct{}
+
+// stateChangeMsg signals component state change
+type stateChangeMsg struct {
+	componentID string
 }
