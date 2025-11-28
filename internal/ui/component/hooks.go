@@ -37,9 +37,11 @@ func UseState[T any](ctx *Context, initial T, key ...string) *State[T] {
 	value := state.Value.(T)
 
 	setter := func(newValue T) {
-		state.Value = newValue
-		ctx.SetHook(hookKey, state)
-		ctx.TriggerStateChange()
+		if !reflect.DeepEqual(state.Value, newValue) {
+			state.Value = newValue
+			ctx.SetHook(hookKey, state)
+			ctx.TriggerStateChange()
+		}
 	}
 
 	return &State[T]{
@@ -49,16 +51,36 @@ func UseState[T any](ctx *Context, initial T, key ...string) *State[T] {
 }
 
 // UseEffect runs side effect when dependencies change
+// - deps = nil - re-render on every render
+// - deps = [] - re-render on first render
+// - deps = [...] - re-render when deps change
 func UseEffect(ctx *Context, effect func(), deps []any, key ...string) {
 	hookKey := ctx.generateHookKey(key...)
 
+	state, exists := ctx.GetHook(hookKey)
+
+	if deps == nil {
+		effect()
+		return
+	}
+
+	if len(deps) == 0 {
+		if !exists || !state.Initialized {
+			effect()
+			ctx.SetHook(hookKey, &HookState{
+				Dependencies: deps,
+				Initialized:  true,
+			})
+		}
+		return
+	}
+
 	if ctx.dependenciesChanged(hookKey, deps) {
 		effect()
-		state := &HookState{
+		ctx.SetHook(hookKey, &HookState{
 			Dependencies: deps,
 			Initialized:  true,
-		}
-		ctx.SetHook(hookKey, state)
+		})
 	}
 }
 
