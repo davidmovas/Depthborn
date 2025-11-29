@@ -119,11 +119,3 @@ func (r *Renderer) TargetFPS() int {
 	}
 	return 60
 }
-
-// LastKey returns the last pressed key (for debugging).
-func (r *Renderer) LastKey() string {
-	if r.model != nil {
-		return r.model.LastKey()
-	}
-	return ""
-}

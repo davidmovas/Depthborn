@@ -29,8 +29,17 @@ func Button(props InteractiveProps, label string) component.Component {
 	})
 
 	// If no interaction, return simple text
-	if props.OnClick == nil && len(props.Hotkeys) == 0 {
+	if props.OnClick == nil && len(props.Hotkeys) == 0 && len(props.Actions) == 0 {
 		return textComp
+	}
+
+	// Convert primitive.HotkeyAction to component.HotkeyAction
+	var actions []component.HotkeyAction
+	for _, a := range props.Actions {
+		actions = append(actions, component.HotkeyAction{
+			Key:    a.Key,
+			Action: a.Action,
+		})
 	}
 
 	// Wrap with focusable
@@ -38,6 +47,7 @@ func Button(props InteractiveProps, label string) component.Component {
 		ID:        props.ID,
 		Position:  props.Position,
 		Hotkeys:   props.Hotkeys,
+		Actions:   actions,
 		Disabled:  props.Disabled,
 		AutoFocus: props.AutoFocus,
 		IsInput:   false,

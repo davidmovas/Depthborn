@@ -35,6 +35,9 @@ type Focusable interface {
 	// Hotkeys returns keys that activate this component.
 	Hotkeys() []string
 
+	// Actions returns hotkey-to-action mappings for this component.
+	Actions() []HotkeyAction
+
 	// CanFocus returns whether this component can currently receive focus.
 	CanFocus() bool
 
@@ -66,8 +69,11 @@ type FocusManager struct {
 	// Current focus index (-1 = none)
 	focusIndex int
 
-	// Hotkey lookup (normalized key -> focusable)
+	// Hotkey lookup (normalized key -> focusable) for simple activation
 	hotkeys map[string]Focusable
+
+	// Actions lookup (normalized key -> action function) for custom actions
+	actions map[string]func()
 
 	// 2D grid for spatial navigation
 	grid map[int]map[int]Focusable
@@ -99,6 +105,7 @@ func NewFocusManager() *FocusManager {
 	return &FocusManager{
 		items:         make([]Focusable, 0),
 		hotkeys:       make(map[string]Focusable),
+		actions:       make(map[string]func()),
 		grid:          make(map[int]map[int]Focusable),
 		autoPositions: make(map[string]*FocusPosition),
 		focusIndex:    -1,
@@ -112,6 +119,7 @@ func (fm *FocusManager) Reset() {
 
 	fm.items = make([]Focusable, 0)
 	fm.hotkeys = make(map[string]Focusable)
+	fm.actions = make(map[string]func())
 	fm.grid = make(map[int]map[int]Focusable)
 	fm.autoPositions = make(map[string]*FocusPosition)
 	fm.frameItems = nil
@@ -172,12 +180,20 @@ func (fm *FocusManager) EndFrame() {
 	fm.items = fm.frameItems
 	fm.frameItems = nil
 
-	// Rebuild hotkey map
+	// Rebuild hotkey map and actions map
 	fm.hotkeys = make(map[string]Focusable)
+	fm.actions = make(map[string]func())
 	for _, item := range fm.items {
+		// Simple hotkeys (for activation) - case-insensitive
 		for _, hk := range item.Hotkeys() {
 			if hk != "" {
 				fm.hotkeys[strings.ToLower(hk)] = item
+			}
+		}
+		// Custom actions - case-insensitive
+		for _, action := range item.Actions() {
+			if action.Key != "" && action.Action != nil {
+				fm.actions[strings.ToLower(action.Key)] = action.Action
 			}
 		}
 	}
@@ -335,8 +351,14 @@ func (fm *FocusManager) HandleKey(key string) bool {
 		}
 	}
 
-	// Hotkeys (only when not in input mode)
+	// Hotkeys and actions (only when not in input mode)
 	if !fm.inInput {
+		// Check custom actions first
+		if action, exists := fm.actions[normalizedKey]; exists {
+			action()
+			return true
+		}
+		// Then check simple hotkeys (for activation)
 		if focusable, exists := fm.hotkeys[normalizedKey]; exists {
 			return focusable.OnActivate()
 		}

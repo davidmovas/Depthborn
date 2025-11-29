@@ -37,11 +37,18 @@ type StyleProps struct {
 	HoverStyle *style.Style // Style when hovered (future)
 }
 
+// HotkeyAction defines an action triggered by a hotkey.
+type HotkeyAction struct {
+	Key    string // e.g., "i", "ctrl+i", "shift+i", "ctrl+shift+i"
+	Action func() // Action to execute
+}
+
 // FocusProps provides focus/interaction capabilities.
 type FocusProps struct {
 	ID        string                   // Explicit ID (auto-generated if empty)
 	Position  *component.FocusPosition // 2D grid position for navigation
-	Hotkeys   []string                 // Keys that activate this component
+	Hotkeys   []string                 // Keys that activate this component (simple activation)
+	Actions   []HotkeyAction           // Multiple hotkey actions with different modifiers
 	AutoFocus bool                     // Focus when registered
 	Disabled  bool                     // Cannot receive focus
 	IsInput   bool                     // Is an input field (blocks hotkeys)

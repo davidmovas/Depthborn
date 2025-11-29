@@ -110,14 +110,7 @@ func renderHeader(ctx *component.Context, width, height int, counter int) string
 		Foreground(style.Grey500)
 
 	title := titleStyle.Render("Depthborn UI Demo")
-
-	// Debug: show current focus position
-	pos := ctx.Focus().CurrentPosition()
-	posStr := "nil"
-	if pos != nil {
-		posStr = fmt.Sprintf("r%d,c%d", pos.Row, pos.Col)
-	}
-	info := infoStyle.Render(fmt.Sprintf("Screen: %dx%d | Counter: %d | Focus: %s", width, height, counter, posStr))
+	info := infoStyle.Render(fmt.Sprintf("Screen: %dx%d | Counter: %d", width, height, counter))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, title, "  ", info)
 }
@@ -172,30 +165,33 @@ func renderButtonsDemo(ctx *component.Context, counter *component.State[int]) co
 			Heading(TextProps{Content: "Button Examples"}),
 			VSpacer(1),
 
-			// Row of buttons - minimalist styling (uses default Button style now)
+			// Row of buttons with hotkey actions (i/d = ±1, alt+i/d = ±10)
 			HStack(ContainerProps{
 				ChildrenProps: Children(
 					Button(InteractiveProps{
 						FocusProps: FocusProps{
-							OnClick: func() {
-								counter.Set(counter.Get() + 1)
+							OnClick: func() { counter.Set(counter.Get() + 1) },
+							Actions: []HotkeyAction{
+								{Key: "i", Action: func() { counter.Set(counter.Get() + 1) }},
+								{Key: "alt+i", Action: func() { counter.Set(counter.Get() + 10) }},
 							},
 						},
 					}, "[+] Increment"),
 
 					Button(InteractiveProps{
 						FocusProps: FocusProps{
-							OnClick: func() {
-								counter.Set(counter.Get() - 1)
+							OnClick: func() { counter.Set(counter.Get() - 1) },
+							Actions: []HotkeyAction{
+								{Key: "d", Action: func() { counter.Set(counter.Get() - 1) }},
+								{Key: "alt+d", Action: func() { counter.Set(counter.Get() - 10) }},
 							},
 						},
 					}, "[-] Decrement"),
 
 					Button(InteractiveProps{
 						FocusProps: FocusProps{
-							OnClick: func() {
-								counter.Set(0)
-							},
+							OnClick: func() { counter.Set(0) },
+							Hotkeys: []string{"r"},
 						},
 					}, "[x] Reset"),
 				),
@@ -203,7 +199,7 @@ func renderButtonsDemo(ctx *component.Context, counter *component.State[int]) co
 
 			VSpacer(1),
 			Text(TextProps{
-				Content: fmt.Sprintf("Counter value: %d", counter.Get()),
+				Content: fmt.Sprintf("Counter: %d", counter.Get()),
 				StyleProps: StyleProps{
 					Style: Ptr(style.Merge(style.Bold, style.Fg(style.Interactive))),
 				},

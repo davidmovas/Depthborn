@@ -33,9 +33,6 @@ type Model struct {
 	lastContent string
 	needsRender bool
 	program     *tea.Program
-
-	// Debug: last key pressed
-	lastKey string
 }
 
 // NewModel creates a new BubbleTea model.
@@ -110,7 +107,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleKey processes keyboard input
 func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
-	m.lastKey = key
 	m.needsRender = true
 
 	// QUIT: ctrl+c and ctrl+q ALWAYS quit
@@ -211,11 +207,6 @@ func (m *Model) TargetFPS() int {
 // Context returns the root context.
 func (m *Model) Context() *component.Context {
 	return m.context
-}
-
-// LastKey returns the last pressed key (for debugging).
-func (m *Model) LastKey() string {
-	return m.lastKey
 }
 
 // RequestRender triggers a re-render.

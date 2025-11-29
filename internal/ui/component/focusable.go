@@ -5,6 +5,12 @@ import (
 	"encoding/hex"
 )
 
+// HotkeyAction defines an action triggered by a specific hotkey.
+type HotkeyAction struct {
+	Key    string // e.g., "i", "ctrl+i", "shift+i"
+	Action func()
+}
+
 // FocusableConfig configures focusable behavior.
 type FocusableConfig struct {
 	// ID is an explicit ID (auto-generated if empty)
@@ -15,6 +21,9 @@ type FocusableConfig struct {
 
 	// Hotkeys for direct activation (e.g., []string{"n", "ctrl+n"})
 	Hotkeys []string
+
+	// Actions for multiple hotkey bindings with different actions
+	Actions []HotkeyAction
 
 	// Whether this component can receive focus
 	Disabled bool
@@ -84,6 +93,10 @@ func (fc *FocusableComponent) Position() *FocusPosition {
 
 func (fc *FocusableComponent) Hotkeys() []string {
 	return fc.config.Hotkeys
+}
+
+func (fc *FocusableComponent) Actions() []HotkeyAction {
+	return fc.config.Actions
 }
 
 func (fc *FocusableComponent) CanFocus() bool {
