@@ -38,8 +38,8 @@ type ProgressBarProps struct {
 func ProgressBar(props ProgressBarProps) component.Component {
 	return component.Func(func(ctx *component.Context) string {
 		width := 30
-		if props.Width != nil {
-			width = *props.Width
+		if props.Width > 0 {
+			width = props.Width
 		}
 
 		// Clamp value between 0 and 1

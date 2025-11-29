@@ -56,7 +56,7 @@ func Alert(props AlertProps) component.Component {
 				HStack(ContainerProps{
 					ChildrenProps: Children(
 						Box(ContainerProps{
-							LayoutProps:   LayoutProps{Width: Ptr(60)},
+							LayoutProps:   LayoutProps{Width: 60},
 							ChildrenProps: ChildrenProps{Children: content},
 						}),
 						closeBtn,

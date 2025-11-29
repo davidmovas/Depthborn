@@ -12,11 +12,11 @@ func Spacer(props LayoutProps) component.Component {
 		width := 1
 		height := 1
 
-		if props.Width != nil {
-			width = *props.Width
+		if props.Width > 0 {
+			width = props.Width
 		}
-		if props.Height != nil {
-			height = *props.Height
+		if props.Height > 0 {
+			height = props.Height
 		}
 
 		content := strings.Repeat(" ", width)
@@ -34,12 +34,10 @@ func Spacer(props LayoutProps) component.Component {
 
 // HSpacer renders horizontal spacer
 func HSpacer(width int) component.Component {
-	w := width
-	return Spacer(LayoutProps{Width: &w})
+	return Spacer(LayoutProps{Width: width})
 }
 
 // VSpacer renders vertical spacer
 func VSpacer(height int) component.Component {
-	h := height
-	return Spacer(LayoutProps{Height: &h})
+	return Spacer(LayoutProps{Height: height})
 }

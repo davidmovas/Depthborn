@@ -5,6 +5,7 @@ import (
 	"github.com/davidmovas/Depthborn/internal/ui/style"
 )
 
+// If conditionally renders a component.
 func If(condition bool, comp component.Component) component.Component {
 	if condition {
 		return comp
@@ -12,7 +13,25 @@ func If(condition bool, comp component.Component) component.Component {
 	return component.Empty()
 }
 
-func ptr[T any](v T) *T { return &v }
+// IfElse conditionally renders one of two components.
+func IfElse(condition bool, ifTrue, ifFalse component.Component) component.Component {
+	if condition {
+		return ifTrue
+	}
+	return ifFalse
+}
+
+// --- Modal Size Helpers ---
+
+// ModalSize represents modal dialog size.
+type ModalSize string
+
+const (
+	ModalSizeSmall  ModalSize = "small"  // 40 cols
+	ModalSizeMedium ModalSize = "medium" // 60 cols
+	ModalSizeLarge  ModalSize = "large"  // 80 cols
+	ModalSizeFull   ModalSize = "full"   // Full width
+)
 
 func calculateModalWidth(size ModalSize, screenWidth int) int {
 	switch size {
@@ -29,62 +48,7 @@ func calculateModalWidth(size ModalSize, screenWidth int) int {
 	}
 }
 
-func buildModalHeader(title *string, showClose *bool, onClose func()) component.Component {
-	titleComp := component.Empty()
-	if title != nil {
-		titleComp = Heading(TextProps{Content: *title})
-	}
-
-	closeBtn := component.Empty()
-	if showClose != nil && *showClose && onClose != nil {
-		closeBtn = Button(
-			InteractiveProps{
-				StyleProps: WithStyle(
-					style.Merge(style.Fg(style.Grey600), style.Bold),
-				),
-				FocusProps: FocusProps{
-					OnClick: onClose,
-				},
-			},
-			"✕",
-		)
-	}
-
-	return HStack(ContainerProps{
-		ChildrenProps: Children(
-			titleComp, closeBtn,
-		),
-	}, 2)
-}
-
-func buildModalOverlay(size component.ScreenSize, onClose func(), closeOnClick *bool) component.Component {
-	clickable := closeOnClick != nil && *closeOnClick && onClose != nil
-
-	overlayStyle := style.Merge(
-		style.Bg(style.Black),
-		// TODO: Add opacity/dim effect
-	)
-
-	overlay := Box(ContainerProps{
-		LayoutProps: LayoutProps{
-			Width:  Ptr(size.Width),
-			Height: Ptr(size.Height),
-		},
-		StyleProps: StyleProps{Style: &overlayStyle},
-	})
-
-	if clickable {
-		return component.MakeFocusable(overlay, component.FocusableConfig{
-			CanFocus: true,
-			OnActivateCallback: func() bool {
-				onClose()
-				return true
-			},
-		})
-	}
-
-	return overlay
-}
+// --- Badge Variant Helpers ---
 
 func getVariantColor(variant BadgeVariant) style.Color {
 	switch variant {
@@ -118,8 +82,17 @@ func getAlertColors(variant BadgeVariant) (bg, fg, border style.Color) {
 	}
 }
 
+// --- Utility Functions ---
+
 func minInt(a, b int) int {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
 		return a
 	}
 	return b

@@ -1,20 +1,22 @@
 package tea
 
 import (
+	"errors"
+
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/davidmovas/Depthborn/internal/ui/cargo"
 	"github.com/davidmovas/Depthborn/internal/ui/component"
 	"github.com/davidmovas/Depthborn/internal/ui/navigation"
 	"github.com/davidmovas/Depthborn/internal/ui/renderer"
 )
 
 var (
-	ErrNotInitialized = &RendererError{msg: "renderer not initialized"}
+	ErrNotInitialized = errors.New("renderer not initialized")
 )
 
+// Verify interface compliance
 var _ renderer.Renderer = (*Renderer)(nil)
 
-// Renderer implements renderer.Renderer for BubbleTea
+// Renderer implements renderer.Renderer for BubbleTea.
 type Renderer struct {
 	config    renderer.Config
 	navigator *navigation.Navigator
@@ -22,7 +24,7 @@ type Renderer struct {
 	model     *Model
 }
 
-// New creates new BubbleTea renderer
+// New creates a new BubbleTea renderer.
 func New(config renderer.Config, navigator *navigation.Navigator) *Renderer {
 	return &Renderer{
 		config:    config,
@@ -30,39 +32,46 @@ func New(config renderer.Config, navigator *navigation.Navigator) *Renderer {
 	}
 }
 
-// Init implements renderer.Renderer.Init
+// Init implements renderer.Renderer.
 func (r *Renderer) Init() error {
-	// Create model
-	r.model = NewModel(r.navigator)
+	// Get FPS from config or use default
+	fps := r.config.FPS
+	if fps <= 0 {
+		fps = 60
+	}
 
-	//cargo observer to trigger re-renders
-	cargo.AddObserver(func(_ string, _ any) {
-		r.model.RequestRender()
-	})
+	// Create model
+	r.model = NewModel(r.navigator, fps)
+
+	// Build program options - always use alt screen for proper terminal handling
+	opts := []tea.ProgramOption{
+		tea.WithAltScreen(),
+	}
+
+	if r.config.Mouse {
+		opts = append(opts, tea.WithMouseCellMotion())
+	}
 
 	// Create program
-	r.program = tea.NewProgram(
-		r.model,
-		tea.WithAltScreen(),       // Use alternate screen buffer
-		tea.WithMouseCellMotion(), // Enable mouse support (optional)
-	)
+	r.program = tea.NewProgram(r.model, opts...)
 
-	// Set program reference in model (for sending messages)
+	// Set program reference in model
 	r.model.SetProgram(r.program)
 
 	return nil
 }
 
-// Run implements renderer.Renderer.Run (blocking)
+// Run implements renderer.Renderer.
 func (r *Renderer) Run() error {
 	if r.program == nil {
 		return ErrNotInitialized
 	}
+
 	_, err := r.program.Run()
 	return err
 }
 
-// Stop implements renderer.Renderer.Stop
+// Stop implements renderer.Renderer.
 func (r *Renderer) Stop() error {
 	if r.program != nil {
 		r.program.Quit()
@@ -70,30 +79,51 @@ func (r *Renderer) Stop() error {
 	return nil
 }
 
-// Render implements renderer.Renderer.Render
-// For BubbleTea, rendering is automatic via View()
-// This method can trigger a re-render
+// Render implements renderer.Renderer.
 func (r *Renderer) Render(comp component.Component) error {
-	if r.program == nil {
+	if r.model == nil {
 		return ErrNotInitialized
 	}
-	// Trigger debounced render
-	r.model.RequestRender()
 
+	r.model.RequestRender()
 	return nil
 }
 
-// RequestRender implements renderer.Renderer.RequestRender
+// RequestRender implements renderer.Renderer.
 func (r *Renderer) RequestRender() {
 	if r.model != nil {
 		r.model.RequestRender()
 	}
 }
 
-type RendererError struct {
-	msg string
+// Size implements renderer.Renderer.
+func (r *Renderer) Size() (width, height int) {
+	if r.model != nil {
+		return r.model.Size()
+	}
+	return 80, 24
 }
 
-func (e *RendererError) Error() string {
-	return e.msg
+// FPS returns current measured FPS.
+func (r *Renderer) FPS() float64 {
+	if r.model != nil {
+		return r.model.FPS()
+	}
+	return 0
+}
+
+// TargetFPS returns target FPS.
+func (r *Renderer) TargetFPS() int {
+	if r.model != nil {
+		return r.model.TargetFPS()
+	}
+	return 60
+}
+
+// LastKey returns the last pressed key (for debugging).
+func (r *Renderer) LastKey() string {
+	if r.model != nil {
+		return r.model.LastKey()
+	}
+	return ""
 }

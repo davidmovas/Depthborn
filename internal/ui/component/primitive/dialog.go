@@ -11,27 +11,27 @@ type DialogProps struct {
 	Message     string
 	OnConfirm   func()
 	OnCancel    func()
-	ConfirmText *string
-	CancelText  *string
-	Variant     *BadgeVariant
+	ConfirmText string
+	CancelText  string
+	Variant     BadgeVariant
 }
 
 // Dialog renders simple confirmation dialog
 func Dialog(props DialogProps) component.Component {
 	return component.Func(func(ctx *component.Context) string {
-		confirmText := "Confirm"
-		if props.ConfirmText != nil {
-			confirmText = *props.ConfirmText
+		confirmText := props.ConfirmText
+		if confirmText == "" {
+			confirmText = "Confirm"
 		}
 
-		cancelText := "Cancel"
-		if props.CancelText != nil {
-			cancelText = *props.CancelText
+		cancelText := props.CancelText
+		if cancelText == "" {
+			cancelText = "Cancel"
 		}
 
-		variant := BadgeDefault
-		if props.Variant != nil {
-			variant = *props.Variant
+		variant := props.Variant
+		if variant == "" {
+			variant = BadgeDefault
 		}
 
 		footer := Children(
@@ -66,7 +66,7 @@ func Dialog(props DialogProps) component.Component {
 							),
 							FocusProps: FocusProps{
 								OnClick:   props.OnConfirm,
-								AutoFocus: Ptr(true),
+								AutoFocus: true,
 							},
 						},
 						confirmText,
@@ -76,19 +76,20 @@ func Dialog(props DialogProps) component.Component {
 		)
 
 		return Modal(ModalProps{
-			Open:    props.Open,
-			OnClose: props.OnCancel,
-			Title:   &props.Title,
-			Size:    ModalSizeSmall,
+			Open:           props.Open,
+			OnClose:        props.OnCancel,
+			Title:          props.Title,
+			Size:           ModalSizeSmall,
+			CloseOnEscape:  true,
+			CloseOnOverlay: true,
+			ShowCloseBtn:   false,
+			Overlay:        true,
 			ContainerProps: ContainerProps{
 				ChildrenProps: Children(
 					Text(TextProps{Content: props.Message}),
 				),
 			},
-			Footer:         footer.Children,
-			CloseOnEscape:  Ptr(true),
-			CloseOnOverlay: Ptr(true),
-			ShowCloseBtn:   Ptr(false),
+			Footer: footer.Children,
 		}).Render(ctx)
 	})
 }

@@ -1,19 +1,12 @@
 package primitive
 
 import (
+	"github.com/charmbracelet/lipgloss"
 	"github.com/davidmovas/Depthborn/internal/ui/component"
 	"github.com/davidmovas/Depthborn/internal/ui/style"
 )
 
-type ModalSize string
-
-const (
-	ModalSizeSmall  ModalSize = "small"  // 40 cols
-	ModalSizeMedium ModalSize = "medium" // 60 cols
-	ModalSizeLarge  ModalSize = "large"  // 80 cols
-	ModalSizeFull   ModalSize = "full"   // 100% width
-)
-
+// ModalProps configures a modal dialog.
 type ModalProps struct {
 	ContainerProps
 
@@ -22,106 +15,132 @@ type ModalProps struct {
 	OnClose func()
 
 	// Content
-	Title       *string
-	Description *string
+	Title       string
+	Description string
 	Footer      []component.Component
 
 	// Appearance
 	Size           ModalSize
-	CloseOnEscape  *bool
-	CloseOnOverlay *bool
-	ShowCloseBtn   *bool
+	CloseOnEscape  bool
+	CloseOnOverlay bool
+	ShowCloseBtn   bool
+	Overlay        bool
 
 	// Advanced
-	ID        string
-	Overlay   *bool // Show dimmed overlay
-	FocusTrap *bool // Trap focus inside modal
+	ID string
 }
 
-// Modal renders modal dialog with overlay
+// Modal renders a modal dialog with overlay.
 func Modal(props ModalProps) component.Component {
 	return component.Func(func(ctx *component.Context) string {
+		portalID := props.ID
+		if portalID == "" {
+			portalID = "modal_default"
+		}
+
 		if !props.Open {
+			// Close portal if it was open
+			ctx.Portals().Close(portalID)
 			return ""
 		}
 
-		screenSize := ctx.ScreenSize()
+		// Create the modal component that will be rendered in portal context
+		modalComponent := component.Func(func(portalCtx *component.Context) string {
+			width, height := portalCtx.ScreenSize()
+			modalWidth := calculateModalWidth(props.Size, width)
 
-		modalWidth := calculateModalWidth(props.Size, screenSize.Width)
+			// Build modal content
+			var content []component.Component
 
-		var modalContent []component.Component
+			// Header (title + close button)
+			if props.Title != "" || props.ShowCloseBtn {
+				header := buildHeader(props.Title, props.ShowCloseBtn, props.OnClose)
+				content = append(content, header)
+				content = append(content, VSpacer(1))
+			}
 
-		if props.Title != nil || (props.ShowCloseBtn != nil && *props.ShowCloseBtn) {
-			header := buildModalHeader(props.Title, props.ShowCloseBtn, props.OnClose)
-			modalContent = append(modalContent, header)
-			modalContent = append(modalContent, VSpacer(1))
-		}
+			// Description
+			if props.Description != "" {
+				content = append(content,
+					Text(TextProps{
+						Content: props.Description,
+						StyleProps: StyleProps{
+							Style: Ptr(style.Fg(style.Grey400)),
+						},
+					}),
+					VSpacer(1),
+				)
+			}
 
-		if props.Description != nil {
-			modalContent = append(modalContent,
-				Label(TextProps{
-					Content: *props.Description,
-				}),
-				VSpacer(1),
-			)
-		}
+			// Children content
+			content = append(content, props.Children...)
 
-		modalContent = append(modalContent, props.Children...)
+			// Footer
+			if len(props.Footer) > 0 {
+				content = append(content, VSpacer(1))
+				content = append(content, Divider(DividerProps{
+					BaseProps: BaseProps{
+						LayoutProps: LayoutProps{Width: modalWidth - 4},
+					},
+				}))
+				content = append(content, VSpacer(1))
+				content = append(content, props.Footer...)
+			}
 
-		if len(props.Footer) > 0 {
-			modalContent = append(modalContent, VSpacer(1))
-			modalContent = append(modalContent, Divider(DividerProps{
-				BaseProps: BaseProps{
-					LayoutProps: LayoutProps{Width: Ptr(modalWidth - 4)},
-				},
-			}))
-			modalContent = append(modalContent, VSpacer(1))
-			modalContent = append(modalContent, props.Footer...)
-		}
-
-		// Wrap in card
-		modalCard := Card(ContainerProps{
-			ChildrenProps: ChildrenProps{Children: modalContent},
-			LayoutProps: LayoutProps{
-				Width:   Ptr(modalWidth),
-				MaxW:    Ptr(screenSize.Width - 4),
-				Padding: Ptr(2),
-			},
-			StyleProps: StyleProps{
-				Style: style.S(
-					style.Bg(style.White),
-					style.BrColor(style.New(), style.Grey400),
-				),
-			},
-		})
-
-		// Center modal
-		centeredModal := Center(CenterProps{
-			Horizontal: Ptr(true),
-			Vertical:   Ptr(true),
-			ContainerProps: ContainerProps{
+			// Wrap content in card with dark background for visibility
+			modalCard := Card(ContainerProps{
+				ChildrenProps: Children(content...),
 				LayoutProps: LayoutProps{
-					Width:  Ptr(screenSize.Width),
-					Height: Ptr(screenSize.Height),
+					Width:    modalWidth,
+					MaxWidth: width - 4,
+					Padding:  2,
 				},
-				ChildrenProps: ChildrenProps{
-					Children: []component.Component{modalCard},
+				StyleProps: StyleProps{
+					Style: Ptr(style.Merge(
+						style.Bg(style.Grey800),
+						style.Fg(style.Grey100),
+						style.BrColor(style.New(), style.Grey600),
+					)),
 				},
-			},
+			})
+
+			// Center modal on screen
+			centeredStyle := lipgloss.NewStyle().
+				Width(width).
+				Height(height).
+				Align(lipgloss.Center, lipgloss.Center)
+
+			// Render with portal context so focusable elements register correctly
+			return centeredStyle.Render(modalCard.Render(portalCtx))
 		})
 
-		// Add to portal layer
-		return Portal(PortalProps{
-			ID:    props.ID,
-			Layer: component.LayerModal,
-			Children: []component.Component{
-				// Overlay
-				If(props.Overlay == nil || *props.Overlay,
-					buildModalOverlay(screenSize, props.OnClose, props.CloseOnOverlay),
+		// Register with portal system
+		ctx.Portals().Open(portalID, component.LayerModal, modalComponent)
+
+		return ""
+	})
+}
+
+func buildHeader(title string, showClose bool, onClose func()) component.Component {
+	return component.Func(func(ctx *component.Context) string {
+		var left, right string
+
+		if title != "" {
+			left = Heading(TextProps{Content: title}).Render(ctx)
+		}
+
+		if showClose && onClose != nil {
+			closeBtn := Button(InteractiveProps{
+				StyleProps: WithStyle(
+					style.Merge(style.Fg(style.Grey600), style.Bold),
 				),
-				// Modal content
-				centeredModal,
-			},
-		}).Render(ctx)
+				FocusProps: FocusProps{
+					OnClick: onClose,
+				},
+			}, "x")
+			right = closeBtn.Render(ctx)
+		}
+
+		return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 	})
 }

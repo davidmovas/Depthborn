@@ -41,11 +41,11 @@ type TextAreaProps struct {
 func TextArea(props TextAreaProps) component.Component {
 	width := 40
 	height := 5
-	if props.Width != nil {
-		width = *props.Width
+	if props.Width > 0 {
+		width = props.Width
 	}
-	if props.Height != nil {
-		height = *props.Height
+	if props.Height > 0 {
+		height = props.Height
 	}
 
 	baseComp := component.Func(func(ctx *component.Context) string {
@@ -161,13 +161,12 @@ func TextArea(props TextAreaProps) component.Component {
 		}
 
 		return component.MakeFocusable(baseComp, component.FocusableConfig{
-			Position:        props.Position,
-			CanFocus:        true,
-			AutoFocus:       props.AutoFocus != nil && *props.AutoFocus,
-			IsInput:         true,
-			OnFocusCallback: props.OnFocus,
-			OnBlurCallback:  props.OnBlur,
-			OnActivateCallback: func() bool {
+			Position:  props.Position,
+			AutoFocus: props.AutoFocus,
+			IsInput:   true,
+			OnFocus:   props.OnFocus,
+			OnBlur:    props.OnBlur,
+			OnActivate: func() bool {
 				if props.OnSubmit != nil {
 					props.OnSubmit(props.Value)
 					return true

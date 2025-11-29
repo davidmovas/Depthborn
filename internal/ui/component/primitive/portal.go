@@ -2,23 +2,20 @@ package primitive
 
 import "github.com/davidmovas/Depthborn/internal/ui/component"
 
+// PortalProps configures the Portal component.
 type PortalProps struct {
-	Children []component.Component
-	Layer    component.PortalLayer
 	ID       string
-	ZIndex   *int
+	Layer    component.PortalLayer
+	ZIndex   int
+	Open     bool
+	Children []component.Component
 }
 
-// Portal renders children in specified layer (modal, toast, tooltip)
+// Portal renders children in a portal layer.
 func Portal(props PortalProps) component.Component {
 	return component.Func(func(ctx *component.Context) string {
-		if len(props.Children) == 0 {
+		if !props.Open && len(props.Children) == 0 {
 			return ""
-		}
-
-		zIndex := 1000
-		if props.ZIndex != nil {
-			zIndex = *props.ZIndex
 		}
 
 		// Create wrapper component for portal content
@@ -26,15 +23,20 @@ func Portal(props PortalProps) component.Component {
 			ChildrenProps: ChildrenProps{Children: props.Children},
 		})
 
-		// Register in portal manager
-		ctx.PortalManager().Register(component.PortalEntry{
-			ID:        props.ID,
-			Layer:     props.Layer,
-			Component: portalContent,
-			ZIndex:    zIndex,
-		})
+		// Register with portal manager
+		id := props.ID
+		if id == "" {
+			id = "portal_default"
+		}
 
-		// Return empty - actual rendering happens in portal layer
+		layer := props.Layer
+		if layer == 0 {
+			layer = component.LayerOverlay
+		}
+
+		ctx.Portals().OpenWithZIndex(id, layer, props.ZIndex, portalContent)
+
+		// Return empty - actual rendering happens via PortalManager.RenderPortals()
 		return ""
 	})
 }

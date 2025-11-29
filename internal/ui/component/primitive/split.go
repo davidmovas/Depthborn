@@ -40,8 +40,8 @@ func Split(props SplitProps) component.Component {
 		}
 
 		width := 80
-		if props.LayoutProps.Width != nil {
-			width = *props.LayoutProps.Width
+		if props.LayoutProps.Width > 0 {
+			width = props.LayoutProps.Width
 		}
 
 		leftWidth := int(float64(width-gap) * ratio)

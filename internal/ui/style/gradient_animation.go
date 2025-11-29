@@ -143,14 +143,14 @@ func getAnimationFrame(ctx *component.Context) int {
 		animController.Set(controller)
 	}
 
-	effect := func() {
-		if animController.Value() != nil {
-			animController.Value().Stop()
-		}
-	}
-
 	// Clean up on unmount
-	component.UseEffect(ctx, effect, []any{})
+	component.UseEffect(ctx, func() func() {
+		return func() {
+			if animController.Value() != nil {
+				animController.Value().Stop()
+			}
+		}
+	}, []any{})
 
 	// Get current frame from controller
 	frame := 0

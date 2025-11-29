@@ -1,60 +1,65 @@
 package component
 
 import (
-	"fmt"
-	"math/rand/v2"
+	"crypto/rand"
+	"encoding/hex"
 )
 
-// FocusableComponent wraps any component to make it focusable
-type FocusableComponent struct {
-	component Component
-	config    FocusableConfig
-	id        string
-}
-
-// FocusableConfig configures focusable behavior
+// FocusableConfig configures focusable behavior.
 type FocusableConfig struct {
-	// 2D position for spatial navigation (nil = linear only)
+	// ID is an explicit ID (auto-generated if empty)
+	ID string
+
+	// Position for 2D grid navigation (nil = linear only)
 	Position *FocusPosition
 
-	// Hotkeys for activation (can be multiple, e.g. ["n", "ctrl+n"])
+	// Hotkeys for direct activation (e.g., []string{"n", "ctrl+n"})
 	Hotkeys []string
 
-	// Whether can receive focus
-	CanFocus bool
+	// Whether this component can receive focus
+	Disabled bool
 
-	// Whether this should be auto-focused on mount
+	// Whether this should be auto-focused when registered
 	AutoFocus bool
 
 	// Whether this is an input component (blocks hotkeys when focused)
 	IsInput bool
 
 	// Callbacks
-	OnFocusCallback    func()
-	OnBlurCallback     func()
-	OnActivateCallback func() bool
+	OnFocus    func()
+	OnBlur     func()
+	OnActivate func() bool
+	OnKeyPress func(key string) bool // For text input handling
 
-	// Style modifiers (applied when focused)
+	// Style applied when focused
 	FocusedStyle func(content string) string
 }
 
-// MakeFocusable wraps component to make it focusable
-func MakeFocusable(comp Component, config FocusableConfig) *FocusableComponent {
+// FocusableComponent wraps any component to make it focusable.
+type FocusableComponent struct {
+	component Component
+	config    FocusableConfig
+	id        string
+}
+
+// MakeFocusable wraps a component to make it focusable.
+func MakeFocusable(comp Component, config FocusableConfig) Component {
+	id := config.ID
+	if id == "" {
+		id = generateID()
+	}
+
 	return &FocusableComponent{
-		id:        generateID(),
 		component: comp,
 		config:    config,
+		id:        id,
 	}
 }
 
-// Render implements Component interface
+// Render implements Component interface.
 func (fc *FocusableComponent) Render(ctx *Context) string {
-	// Register with focus context
-	ctx.FocusContext().Register(fc)
-
-	// Check if currently focused BY INDEX
-	// Don't use Current() because it might be called before all components registered
-	isFocused := ctx.FocusContext().IsFocusedByID(fc.id)
+	// Register with focus manager
+	isFocused := ctx.Focus().Register(fc)
 
 	// Render wrapped component
 	content := fc.component.Render(ctx)
@@ -67,51 +72,84 @@ func (fc *FocusableComponent) Render(ctx *Context) string {
 	return content
 }
 
-// Focusable interface implementation
+// --- Focusable Interface Implementation ---
 
-func (fc *FocusableComponent) GetFocusID() string {
+func (fc *FocusableComponent) ID() string {
 	return fc.id
 }
 
-func (fc *FocusableComponent) GetFocusPosition() *FocusPosition {
+func (fc *FocusableComponent) Position() *FocusPosition {
 	return fc.config.Position
 }
 
-func (fc *FocusableComponent) GetHotkeys() []string {
+func (fc *FocusableComponent) Hotkeys() []string {
 	return fc.config.Hotkeys
 }
 
-func (fc *FocusableComponent) CanReceiveFocus() bool {
-	return fc.config.CanFocus
+func (fc *FocusableComponent) CanFocus() bool {
+	return !fc.config.Disabled
 }
 
-func (fc *FocusableComponent) ShouldAutoFocus() bool {
+func (fc *FocusableComponent) AutoFocus() bool {
 	return fc.config.AutoFocus
 }
 
+func (fc *FocusableComponent) IsInput() bool {
+	return fc.config.IsInput
+}
+
 func (fc *FocusableComponent) OnFocus() {
-	if fc.config.OnFocusCallback != nil {
-		fc.config.OnFocusCallback()
+	if fc.config.OnFocus != nil {
+		fc.config.OnFocus()
 	}
 }
 
 func (fc *FocusableComponent) OnBlur() {
-	if fc.config.OnBlurCallback != nil {
-		fc.config.OnBlurCallback()
+	if fc.config.OnBlur != nil {
+		fc.config.OnBlur()
 	}
 }
 
 func (fc *FocusableComponent) OnActivate() bool {
-	if fc.config.OnActivateCallback != nil {
-		return fc.config.OnActivateCallback()
+	if fc.config.OnActivate != nil {
+		return fc.config.OnActivate()
 	}
 	return false
 }
 
-func (fc *FocusableComponent) IsInputComponent() bool {
-	return fc.config.IsInput
+func (fc *FocusableComponent) OnKeyPress(key string) bool {
+	if fc.config.OnKeyPress != nil {
+		return fc.config.OnKeyPress(key)
+	}
+	return false
 }
 
+// --- Helper Functions ---
+
+// generateID creates a random unique ID.
 func generateID() string {
-	return fmt.Sprintf("comp__%d", rand.IntN(9_999_999))
+	bytes := make([]byte, 8)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to less random but still unique
+		return "id_fallback"
+	}
+	return "fc_" + hex.EncodeToString(bytes)
+}
+
+// UseFocusable is a hook to create focusable state.
+// Returns (isFocused, focus, blur) functions.
+func UseFocusable(ctx *Context, id string) (bool, func(), func()) {
+	isFocused := ctx.Focus().IsFocused(id)
+
+	focus := func() {
+		ctx.Focus().FocusID(id)
+	}
+
+	blur := func() {
+		if ctx.Focus().IsFocused(id) {
+			ctx.Focus().ClearFocus()
+		}
+	}
+
+	return isFocused, focus, blur
 }

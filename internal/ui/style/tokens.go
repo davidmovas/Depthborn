@@ -391,6 +391,21 @@ var (
 	Transparent = lipgloss.Color(" #00000000")
 )
 
+// Interactive element colors - minimalist design
+var (
+	// Default interactive text color (cyan/blue, noticeable but not bright)
+	Interactive = Cyan600
+	// Focused/hovered state - brighter version
+	InteractiveFocus = Cyan400
+	// Active/pressed state
+	InteractiveActive = Cyan300
+
+	// Focus background - subtle gray
+	FocusBg = Grey800
+	// Focus border color
+	FocusBorder = Cyan500
+)
+
 var (
 	TextPrimary   = Grey900
 	TextSecondary = Grey600

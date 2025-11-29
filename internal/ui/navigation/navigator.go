@@ -1,16 +1,22 @@
 package navigation
 
 import (
-	"fmt"
-	"time"
+	"errors"
 )
 
-// Navigator manages screen navigation and lifecycle
+var (
+	ErrNoScreen      = errors.New("no screen active")
+	ErrCannotClose   = errors.New("screen cannot be closed")
+	ErrScreenUnknown = errors.New("screen not registered")
+)
+
+// Navigator manages screen navigation and lifecycle.
 type Navigator struct {
 	registry *Registry
 	stack    *Stack
 }
 
+// NewNavigator creates a new navigator.
 func NewNavigator() *Navigator {
 	return &Navigator{
 		registry: NewRegistry(),
@@ -18,121 +24,150 @@ func NewNavigator() *Navigator {
 	}
 }
 
-// Register adds screen factory to registry
+// Register adds a screen factory to the registry.
 func (n *Navigator) Register(screenID string, factory ScreenFactory) {
 	n.registry.Register(screenID, factory)
 }
 
-// Open creates and opens screen (pushes to stack)
-// params: optional parameters passed to OnEnter
+// Open creates and pushes a screen to the stack.
 func (n *Navigator) Open(screenID string, params map[string]any) error {
 	screen, err := n.registry.Create(screenID)
 	if err != nil {
 		return err
 	}
 
-	// Push to stack
-	n.stack.Push(screen)
+	// Pause current screen if any
+	if current := n.stack.Peek(); current != nil {
+		current.OnPause()
+	}
 
-	// Call OnEnter with params
+	// Initialize and push new screen
+	screen.OnInit()
+	n.stack.Push(screen)
 	screen.OnEnter(params)
 
 	return nil
 }
 
-// Close closes current screen (pops from stack)
-// Returns error if screen cannot be closed
+// Close pops the current screen from the stack.
 func (n *Navigator) Close() error {
 	current := n.stack.Peek()
 	if current == nil {
-		return fmt.Errorf("no screen to close")
+		return ErrNoScreen
 	}
 
 	if !current.CanClose() {
-		return fmt.Errorf("screen '%s' cannot be closed", current.ID())
+		return ErrCannotClose
 	}
 
+	// Call exit lifecycle
+	current.OnExit()
 	n.stack.Pop()
+
+	// Resume previous screen if any
+	if prev := n.stack.Peek(); prev != nil {
+		prev.OnResume()
+	}
+
 	return nil
 }
 
-// Back is alias for Close (more intuitive naming)
+// Back is an alias for Close.
 func (n *Navigator) Back() error {
 	return n.Close()
 }
 
-// Switch replaces current screen with new screen
-// params: optional parameters passed to OnEnter
+// CanGoBack returns whether navigation back is possible.
+func (n *Navigator) CanGoBack() bool {
+	return n.stack.Size() > 1
+}
+
+// Switch replaces the current screen with a new one.
 func (n *Navigator) Switch(screenID string, params map[string]any) error {
 	screen, err := n.registry.Create(screenID)
 	if err != nil {
 		return err
 	}
 
-	// Replace top screen
-	n.stack.Replace(screen)
+	// Exit current screen if any
+	if current := n.stack.Peek(); current != nil {
+		current.OnExit()
+	}
 
-	// Call OnEnter with params
+	// Initialize and replace
+	screen.OnInit()
+	n.stack.Replace(screen)
 	screen.OnEnter(params)
 
 	return nil
 }
 
-// GoTo is alias for Switch
+// GoTo is an alias for Switch.
 func (n *Navigator) GoTo(screenID string, params map[string]any) error {
 	return n.Switch(screenID, params)
 }
 
-// Reset clears stack and opens single screen
-// Useful for returning to main menu or restarting
+// Reset clears the stack and opens a single screen.
 func (n *Navigator) Reset(screenID string, params map[string]any) error {
-	// Clear stack
-	n.stack.Clear()
+	// Exit all screens
+	for !n.stack.IsEmpty() {
+		if current := n.stack.Peek(); current != nil {
+			current.OnExit()
+		}
+		n.stack.Pop()
+	}
 
-	// Open new screen
 	return n.Open(screenID, params)
 }
 
-// Clear removes all screens
+// Clear removes all screens from the stack.
 func (n *Navigator) Clear() {
-	n.stack.Clear()
+	for !n.stack.IsEmpty() {
+		if current := n.stack.Peek(); current != nil {
+			current.OnExit()
+		}
+		n.stack.Pop()
+	}
 }
 
-// Current returns current (top) screen
-// Returns nil if no screens
-func (n *Navigator) Current() Screen {
+// CurrentScreen returns the current (top) screen.
+func (n *Navigator) CurrentScreen() Screen {
 	return n.stack.Peek()
 }
 
-// StackSize returns number of screens in stack
+// Current is an alias for CurrentScreen.
+func (n *Navigator) Current() Screen {
+	return n.CurrentScreen()
+}
+
+// StackSize returns the number of screens in the stack.
 func (n *Navigator) StackSize() int {
 	return n.stack.Size()
 }
 
-// HasScreens returns true if there are any screens
+// HasScreens returns true if there are any screens.
 func (n *Navigator) HasScreens() bool {
 	return !n.stack.IsEmpty()
 }
 
-// Update calls update lifecycle hooks on current screen
-// dt: delta time since last update
-func (n *Navigator) Update(dt time.Duration) {
+// Update calls update lifecycle on the current screen.
+func (n *Navigator) Update() {
 	current := n.stack.Peek()
 	if current == nil {
 		return
 	}
 
 	current.OnUpdateStart()
-	current.OnUpdate(dt)
+	current.OnUpdate()
 	current.OnUpdateEnd()
 }
 
-// Registry returns the screen registry
+// Registry returns the screen registry.
 func (n *Navigator) Registry() *Registry {
 	return n.registry
 }
 
-// Stack returns the screen stack
+// Stack returns the screen stack.
 func (n *Navigator) Stack() *Stack {
 	return n.stack
 }

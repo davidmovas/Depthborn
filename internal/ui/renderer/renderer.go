@@ -2,39 +2,53 @@ package renderer
 
 import "github.com/davidmovas/Depthborn/internal/ui/component"
 
-// Renderer is abstraction over UI rendering backend
-// Allows switching between BubbleTea, Wails, or other frameworks
+// Renderer defines the interface for UI renderers.
+// Implementations can target different outputs (terminal, GUI, etc.)
 type Renderer interface {
-	// Initialize renderer
-
+	// Init initializes the renderer.
 	Init() error
 
-	// Start renderer (blocking call)
-
+	// Run starts the render loop.
 	Run() error
 
-	// Stop renderer
-
+	// Stop shuts down the renderer.
 	Stop() error
 
-	// Render component tree to output
-
+	// Render renders a component immediately.
 	Render(comp component.Component) error
 
-	// Request re-render
-
+	// RequestRender signals that a re-render is needed.
 	RequestRender()
+
+	// Size returns the current screen dimensions.
+	Size() (width, height int)
 }
 
-// Config holds renderer configuration
+// Config holds renderer configuration.
 type Config struct {
-	// Window title (for GUI renderers)
+	// Title displayed in terminal/window title bar
 	Title string
 
-	// Size hints (for terminal renderers)
+	// Target FPS (default 60)
+	FPS int
+
+	// Initial screen size (0 = auto-detect)
 	Width  int
 	Height int
 
-	// Additional config
-	Extra map[string]any
+	// Enable alt screen mode (terminal only)
+	AltScreen bool
+
+	// Enable mouse support
+	Mouse bool
+}
+
+// DefaultConfig returns default renderer configuration.
+func DefaultConfig() Config {
+	return Config{
+		Title:     "Depthborn",
+		FPS:       60,
+		AltScreen: true,
+		Mouse:     true,
+	}
 }

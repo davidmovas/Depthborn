@@ -14,7 +14,7 @@ type SelectOption struct {
 }
 
 type SelectProps struct {
-	BaseProps // StyleProps + LayoutProps
+	BaseProps
 	FocusProps
 
 	// Options
@@ -31,16 +31,13 @@ type SelectProps struct {
 
 	// Visual
 	ShowArrow bool
-
-	// State
-	Disabled bool
 }
 
 // Select creates a dropdown selection component
 func Select(props SelectProps) component.Component {
-	width := 20
-	if props.Width != nil {
-		width = *props.Width
+	width := props.Width
+	if width <= 0 {
+		width = 20
 	}
 
 	showArrow := props.ShowArrow
@@ -94,37 +91,34 @@ func Select(props SelectProps) component.Component {
 		return selectStyle.Render(content)
 	})
 
-	if !props.Disabled {
-		focusStyle := func(content string) string {
+	if props.Disabled {
+		return baseComp
+	}
+
+	return component.MakeFocusable(baseComp, component.FocusableConfig{
+		ID:        props.ID,
+		Position:  props.Position,
+		Hotkeys:   props.Hotkeys,
+		Disabled:  props.Disabled,
+		AutoFocus: props.AutoFocus,
+		IsInput:   true,
+		OnFocus:   props.OnFocus,
+		OnBlur:    props.OnBlur,
+		OnActivate: func() bool {
+			if props.OnClick != nil {
+				props.OnClick()
+				return true
+			}
+			return false
+		},
+		FocusedStyle: func(content string) string {
+			if props.FocusStyle != nil {
+				return props.FocusStyle.Render(content)
+			}
 			focusedStyle := lipgloss.NewStyle().
 				BorderForeground(style.Primary).
 				BorderStyle(lipgloss.RoundedBorder())
 			return focusedStyle.Render(content)
-		}
-
-		if props.FocusStyle != nil {
-			focusStyle = func(content string) string {
-				return props.FocusStyle.Render(content)
-			}
-		}
-
-		return component.MakeFocusable(baseComp, component.FocusableConfig{
-			Position:        props.Position,
-			CanFocus:        true,
-			AutoFocus:       props.AutoFocus != nil && *props.AutoFocus,
-			IsInput:         true,
-			OnFocusCallback: props.OnFocus,
-			OnBlurCallback:  props.OnBlur,
-			OnActivateCallback: func() bool {
-				if props.OnClick != nil {
-					props.OnClick()
-					return true
-				}
-				return false
-			},
-			FocusedStyle: focusStyle,
-		})
-	}
-
-	return baseComp
+		},
+	})
 }
