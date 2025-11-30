@@ -5,6 +5,7 @@ import (
 
 	"github.com/davidmovas/Depthborn/internal/core/attribute"
 	"github.com/davidmovas/Depthborn/internal/core/entity"
+	"github.com/davidmovas/Depthborn/internal/core/types"
 	"github.com/davidmovas/Depthborn/internal/infra"
 	"github.com/davidmovas/Depthborn/internal/item/affix"
 )
@@ -65,8 +66,8 @@ type Item interface {
 	// Icon returns icon identifier
 	Icon() string
 
-	// Tags returns item tags
-	Tags() []string
+	// Tags returns item tag set
+	Tags() types.TagSet
 
 	// IsEquippable returns true if item can be equipped
 	IsEquippable() bool
@@ -121,18 +122,6 @@ const (
 // String returns rarity name
 func (r Rarity) String() string {
 	return [...]string{"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"}[r]
-}
-
-// Color returns rarity color code
-func (r Rarity) Color() string {
-	return [...]string{
-		"#C0C0C0", // Common - silver
-		"#00FF00", // Uncommon - light green
-		"#0080FF", // Rare - white blue
-		"#C000FF", // Epic - purple
-		"#FF6000", // Legendary - fiery orange
-		"#FFD700", // Mythic - gold
-	}[r]
 }
 
 // Equipment represents items that can be equipped
@@ -236,18 +225,18 @@ type Socketable interface {
 type SocketType string
 
 const (
-	SocketGem  SocketType = "gem"
-	SocketRune SocketType = "rune"
-	SocketAny  SocketType = "any"
+	SocketTypeGem       SocketType = "gem"
+	SocketTypeRune      SocketType = "rune"
+	SocketTypeUniversal SocketType = "universal" // Accepts any socketable
 )
 
 // SocketEffect describes bonus granted by socketed item
 type SocketEffect interface {
-	// Apply applies socket effect to equipment
-	Apply(ctx context.Context, equipment Equipment) error
+	// OnSocket is called when the socketable is inserted into equipment
+	OnSocket(ctx context.Context, equipment Equipment, entity entity.Entity) error
 
-	// Remove removes socket effect from equipment
-	Remove(ctx context.Context, equipment Equipment) error
+	// OnUnsocket is called when the socketable is removed from equipment
+	OnUnsocket(ctx context.Context, equipment Equipment, entity entity.Entity) error
 
 	// Description returns human-readable description
 	Description() string

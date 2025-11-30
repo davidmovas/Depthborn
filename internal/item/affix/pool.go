@@ -3,9 +3,11 @@ package affix
 import (
 	"fmt"
 	"math/rand/v2"
+	"sync"
 )
 
 type BasePool struct {
+	mu      sync.RWMutex
 	affixes map[string]Affix
 }
 
@@ -16,19 +18,31 @@ func NewBasePool() Pool {
 }
 
 func (bp *BasePool) Add(affix Affix) {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+
 	bp.affixes[affix.ID()] = affix
 }
 
 func (bp *BasePool) Remove(affixID string) {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+
 	delete(bp.affixes, affixID)
 }
 
 func (bp *BasePool) Get(affixID string) (Affix, bool) {
+	bp.mu.RLock()
+	defer bp.mu.RUnlock()
+
 	affix, exists := bp.affixes[affixID]
 	return affix, exists
 }
 
 func (bp *BasePool) GetByTier(tier int) []Affix {
+	bp.mu.RLock()
+	defer bp.mu.RUnlock()
+
 	result := make([]Affix, 0)
 	for _, affix := range bp.affixes {
 		if affix.Tier() == tier {
@@ -39,6 +53,9 @@ func (bp *BasePool) GetByTier(tier int) []Affix {
 }
 
 func (bp *BasePool) GetByTags(tags ...string) []Affix {
+	bp.mu.RLock()
+	defer bp.mu.RUnlock()
+
 	result := make([]Affix, 0)
 	for _, affix := range bp.affixes {
 		matchesAll := true
@@ -63,11 +80,16 @@ func (bp *BasePool) GetByTags(tags ...string) []Affix {
 }
 
 func (bp *BasePool) Roll(itemType string, itemLevel int, slot string) (Affix, error) {
+	bp.mu.RLock()
+	defer bp.mu.RUnlock()
+
 	eligible := make([]Affix, 0)
 	totalWeight := 0
 
 	for _, affix := range bp.affixes {
-		if affix.Requirements().Check(itemType, itemLevel, slot) {
+		// Handle nil requirements - nil means no restrictions
+		req := affix.Requirements()
+		if req == nil || req.Check(itemType, itemLevel, slot) {
 			eligible = append(eligible, affix)
 			totalWeight += affix.Weight()
 		}
@@ -75,6 +97,11 @@ func (bp *BasePool) Roll(itemType string, itemLevel int, slot string) (Affix, er
 
 	if len(eligible) == 0 {
 		return nil, fmt.Errorf("no eligible affixes found")
+	}
+
+	// Safety check: totalWeight must be positive
+	if totalWeight <= 0 {
+		return nil, fmt.Errorf("total weight is zero or negative")
 	}
 
 	roll := rand.IntN(totalWeight)
@@ -103,6 +130,9 @@ func (bp *BasePool) RollMultiple(count int, itemType string, itemLevel int, slot
 }
 
 func (bp *BasePool) Filter(criteria FilterCriteria) []Affix {
+	bp.mu.RLock()
+	defer bp.mu.RUnlock()
+
 	result := make([]Affix, 0)
 	for _, affix := range bp.affixes {
 		matches := true

@@ -144,7 +144,6 @@ func (b *EffectBuilder) Build() (Effect, error) {
 			eff.AddOnEvent(t, fn)
 		}
 	}
-	b.mu.RUnlock()
 
 	return eff, nil
 }

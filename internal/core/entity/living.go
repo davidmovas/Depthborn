@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/davidmovas/Depthborn/internal/core/attribute"
+	"github.com/davidmovas/Depthborn/pkg/persist"
 )
 
 var _ Living = (*BaseLiving)(nil)
@@ -70,10 +71,9 @@ func (l *BaseLiving) Kill(ctx context.Context, killerID string) error {
 	}
 
 	l.health = 0
-	l.Touch()
 
-	l.Callbacks().TriggerDeath(ctx, l.ID(), killerID)
-	return nil
+	// Call base entity Kill to set isAlive = false and trigger callbacks
+	return l.BaseEntity.Kill(ctx, killerID)
 }
 
 func (l *BaseLiving) MaxHealth() float64 {
@@ -204,6 +204,78 @@ func (l *BaseLiving) Validate() error {
 	if l.health > l.MaxHealth() {
 		return fmt.Errorf("health cannot exceed max health")
 	}
+
+	return nil
+}
+
+func (l *BaseLiving) Clone() any {
+	baseClone := l.BaseEntity.Clone().(*BaseEntity)
+
+	clone := &BaseLiving{
+		BaseEntity: baseClone,
+		health:     l.health,
+		maxHealth:  l.maxHealth,
+	}
+
+	return clone
+}
+
+// LivingState holds the complete serializable state of a BaseLiving.
+type LivingState struct {
+	EntityState
+	Health    float64 `msgpack:"health"`
+	MaxHealth float64 `msgpack:"max_health"`
+}
+
+// MarshalBinary implements persist.Marshaler for BaseLiving.
+func (l *BaseLiving) MarshalBinary() ([]byte, error) {
+	// First get base entity state
+	baseData, err := l.BaseEntity.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode to EntityState to embed
+	var es EntityState
+	if err := persist.DefaultCodec().Decode(baseData, &es); err != nil {
+		return nil, err
+	}
+
+	ls := LivingState{
+		EntityState: es,
+		Health:      l.health,
+		MaxHealth:   l.maxHealth,
+	}
+
+	return persist.DefaultCodec().Encode(ls)
+}
+
+// UnmarshalBinary implements persist.Unmarshaler for BaseLiving.
+func (l *BaseLiving) UnmarshalBinary(data []byte) error {
+	var ls LivingState
+	if err := persist.DefaultCodec().Decode(data, &ls); err != nil {
+		return fmt.Errorf("failed to decode living state: %w", err)
+	}
+
+	// Encode entity state back to bytes for base entity
+	entityData, err := persist.DefaultCodec().Encode(ls.EntityState)
+	if err != nil {
+		return err
+	}
+
+	// Initialize base entity if nil
+	if l.BaseEntity == nil {
+		l.BaseEntity = &BaseEntity{}
+	}
+
+	// Restore base entity
+	if err := l.BaseEntity.UnmarshalBinary(entityData); err != nil {
+		return err
+	}
+
+	// Restore living-specific fields
+	l.health = ls.Health
+	l.maxHealth = ls.MaxHealth
 
 	return nil
 }

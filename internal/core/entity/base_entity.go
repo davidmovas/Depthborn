@@ -10,6 +10,7 @@ import (
 	"github.com/davidmovas/Depthborn/internal/core/types"
 	"github.com/davidmovas/Depthborn/internal/infra/impl"
 	"github.com/davidmovas/Depthborn/internal/world/spatial"
+	"github.com/davidmovas/Depthborn/pkg/persist"
 	"github.com/davidmovas/Depthborn/pkg/state"
 )
 
@@ -158,20 +159,50 @@ func (e *BaseEntity) Progression() progression.Manager {
 }
 
 func (e *BaseEntity) Clone() any {
-	// TODO: Implement deep cloning
-	// Need to clone:
-	// - tags
-	// - attributes (create new manager with same values)
-	// - statuses (create new manager, copy active effects)
-	// - transform (depends on implementation)
-	// - callbacks (probably shouldn't clone, create new registry)
-	// - progression (clone state)
-
 	clone := &BaseEntity{
 		name:    e.name,
 		isAlive: e.isAlive,
-		// TODO: Deep clone all components
 	}
+
+	// Deep clone tags
+	if e.tags != nil {
+		clone.tags = types.NewTagSet()
+		for _, tag := range e.tags.All() {
+			clone.tags.Add(tag)
+		}
+	}
+
+	// Deep clone attributes
+	if e.attributes != nil {
+		clone.attributes = attribute.NewManager()
+		snapshot := e.attributes.Snapshot()
+		clone.attributes.Restore(snapshot)
+	}
+
+	// Deep clone status effects (create fresh manager - effects are transient)
+	if e.statuses != nil {
+		clone.statuses = status.NewManager()
+		// Note: Status effects are typically not cloned as they are transient
+		// and reference-dependent. A fresh manager is provided.
+	}
+
+	// Deep clone transform
+	if e.transform != nil {
+		pos := e.transform.Position()
+		facing := e.transform.Facing()
+		clone.transform = spatial.NewTransform(pos, facing)
+	}
+
+	// Create fresh callback registry (callbacks contain closures that reference
+	// original entity, so we create a new empty registry)
+	clone.callbacks = types.NewCallbackRegistry()
+
+	// Clone BasePersistent with new ID
+	clone.BasePersistent = impl.NewPersistent(e.Type(), clone, nil)
+
+	// Note: progression is not cloned as it typically references external managers
+	// and would require special handling. Set to nil for cloned entities.
+	clone.progression = nil
 
 	return clone
 }
@@ -257,6 +288,110 @@ func (e *BaseEntity) DeserializeState(stateData map[string]any) error {
 		if err := s.GetEntity("transform", e.transform); err != nil {
 			return fmt.Errorf("failed to deserialize transform: %w", err)
 		}
+	}
+
+	return nil
+}
+
+// EntityState holds the complete serializable state of a BaseEntity.
+// Used for MarshalBinary/UnmarshalBinary integration with pkg/persist.
+type EntityState struct {
+	ID         string             `msgpack:"id"`
+	EntityType string             `msgpack:"entity_type"`
+	Version    int64              `msgpack:"version"`
+	CreatedAt  int64              `msgpack:"created_at"`
+	UpdatedAt  int64              `msgpack:"updated_at"`
+	Name       string             `msgpack:"name"`
+	IsAlive    bool               `msgpack:"is_alive"`
+	Attributes map[string]float64 `msgpack:"attributes,omitempty"`
+	Tags       []string           `msgpack:"tags,omitempty"`
+	Position   *PositionState     `msgpack:"position,omitempty"`
+}
+
+// PositionState holds spatial position data.
+type PositionState struct {
+	X      int     `msgpack:"x"`
+	Y      int     `msgpack:"y"`
+	Z      int     `msgpack:"z"`
+	Facing float64 `msgpack:"facing"`
+}
+
+// MarshalBinary implements persist.Marshaler for efficient binary serialization.
+func (e *BaseEntity) MarshalBinary() ([]byte, error) {
+	es := EntityState{
+		ID:         e.ID(),
+		EntityType: e.Type(),
+		Version:    e.Version(),
+		CreatedAt:  e.CreatedAt(),
+		UpdatedAt:  e.UpdatedAt(),
+		Name:       e.name,
+		IsAlive:    e.isAlive,
+	}
+
+	// Serialize attributes
+	if e.attributes != nil {
+		snapshot := e.attributes.Snapshot()
+		es.Attributes = make(map[string]float64, len(snapshot))
+		for k, v := range snapshot {
+			es.Attributes[string(k)] = v
+		}
+	}
+
+	// Serialize tags
+	if e.tags != nil {
+		es.Tags = e.tags.All()
+	}
+
+	// Serialize transform/position
+	if e.transform != nil {
+		pos := e.transform.Position()
+		es.Position = &PositionState{
+			X:      pos.X,
+			Y:      pos.Y,
+			Z:      pos.Z,
+			Facing: float64(e.transform.Facing()),
+		}
+	}
+
+	return persist.DefaultCodec().Encode(es)
+}
+
+// UnmarshalBinary implements persist.Unmarshaler for efficient binary deserialization.
+func (e *BaseEntity) UnmarshalBinary(data []byte) error {
+	var es EntityState
+	if err := persist.DefaultCodec().Decode(data, &es); err != nil {
+		return fmt.Errorf("failed to decode entity state: %w", err)
+	}
+
+	// Restore base persistent fields
+	e.BasePersistent = impl.NewPersistentWithID(es.ID, es.EntityType, e, nil)
+
+	// Restore entity fields
+	e.name = es.Name
+	e.isAlive = es.IsAlive
+
+	// Restore attributes
+	if e.attributes != nil && len(es.Attributes) > 0 {
+		snapshot := make(map[attribute.Type]float64, len(es.Attributes))
+		for k, v := range es.Attributes {
+			snapshot[attribute.Type(k)] = v
+		}
+		e.attributes.Restore(snapshot)
+	}
+
+	// Restore tags
+	if e.tags != nil && len(es.Tags) > 0 {
+		e.tags.Clear()
+		for _, tag := range es.Tags {
+			e.tags.Add(tag)
+		}
+	}
+
+	// Restore transform/position
+	if e.transform != nil && es.Position != nil {
+		pos := spatial.NewPosition(es.Position.X, es.Position.Y, es.Position.Z)
+		e.transform.SetPosition(pos)
+		e.transform.SetFacing(spatial.Facing(es.Position.Facing))
 	}
 
 	return nil
