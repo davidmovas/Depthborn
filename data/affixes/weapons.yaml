@@ -1,0 +1,353 @@
+version: "1.0"
+
+affixes:
+  # =============================================================================
+  # PREFIXES - Weapon Damage
+  # =============================================================================
+
+  # Physical Damage (Group: flat_physical)
+  - id: prefix_phys_damage_minor
+    name: "Sharpened"
+    type: prefix
+    group: flat_physical
+    rank: 15
+    weight: 150
+    description: "Adds {value} physical damage"
+    tags: ["physical", "attack", "weapon"]
+    modifiers:
+      - attribute: physical_damage
+        mod_type: flat
+        min: 2
+        max: 5
+    requirements:
+      min_level: 1
+      item_types: ["weapon_melee", "weapon_ranged"]
+
+  - id: prefix_phys_damage_moderate
+    name: "Honed"
+    type: prefix
+    group: flat_physical
+    rank: 35
+    weight: 100
+    description: "Adds {value} physical damage"
+    tags: ["physical", "attack", "weapon"]
+    modifiers:
+      - attribute: physical_damage
+        mod_type: flat
+        min: 8
+        max: 15
+    requirements:
+      min_level: 15
+      item_types: ["weapon_melee", "weapon_ranged"]
+
+  - id: prefix_phys_damage_major
+    name: "Tempered"
+    type: prefix
+    group: flat_physical
+    rank: 55
+    weight: 70
+    description: "Adds {value} physical damage"
+    tags: ["physical", "attack", "weapon"]
+    modifiers:
+      - attribute: physical_damage
+        mod_type: flat
+        min: 18
+        max: 30
+    requirements:
+      min_level: 35
+      item_types: ["weapon_melee", "weapon_ranged"]
+
+  - id: prefix_phys_damage_supreme
+    name: "Devastating"
+    type: prefix
+    group: flat_physical
+    rank: 80
+    weight: 40
+    description: "Adds {value} physical damage"
+    tags: ["physical", "attack", "weapon"]
+    modifiers:
+      - attribute: physical_damage
+        mod_type: flat
+        min: 35
+        max: 55
+    requirements:
+      min_level: 60
+      item_types: ["weapon_melee", "weapon_ranged"]
+
+  # Fire Damage (Group: flat_fire)
+  - id: prefix_fire_damage_minor
+    name: "Heated"
+    type: prefix
+    group: flat_fire
+    rank: 20
+    weight: 120
+    description: "Adds {value} fire damage"
+    tags: ["fire", "attack", "weapon"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 3
+        max: 7
+    requirements:
+      min_level: 5
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  - id: prefix_fire_damage_moderate
+    name: "Scorching"
+    type: prefix
+    group: flat_fire
+    rank: 45
+    weight: 80
+    description: "Adds {value} fire damage"
+    tags: ["fire", "attack", "weapon"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 12
+        max: 22
+    requirements:
+      min_level: 25
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  - id: prefix_fire_damage_major
+    name: "Infernal"
+    type: prefix
+    group: flat_fire
+    rank: 75
+    weight: 45
+    description: "Adds {value} fire damage"
+    tags: ["fire", "attack", "weapon", "rare"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 28
+        max: 45
+    requirements:
+      min_level: 50
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  # Cold Damage (Group: flat_cold)
+  - id: prefix_cold_damage_minor
+    name: "Chilled"
+    type: prefix
+    group: flat_cold
+    rank: 20
+    weight: 120
+    description: "Adds {value} cold damage"
+    tags: ["cold", "attack", "weapon"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 3
+        max: 7
+    requirements:
+      min_level: 5
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  - id: prefix_cold_damage_moderate
+    name: "Freezing"
+    type: prefix
+    group: flat_cold
+    rank: 45
+    weight: 80
+    description: "Adds {value} cold damage"
+    tags: ["cold", "attack", "weapon"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 12
+        max: 22
+    requirements:
+      min_level: 25
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  # Lightning Damage (Group: flat_lightning)
+  - id: prefix_lightning_damage_minor
+    name: "Sparking"
+    type: prefix
+    group: flat_lightning
+    rank: 20
+    weight: 120
+    description: "Adds {value} lightning damage"
+    tags: ["lightning", "attack", "weapon"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 1
+        max: 10
+    requirements:
+      min_level: 5
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  - id: prefix_lightning_damage_moderate
+    name: "Thundering"
+    type: prefix
+    group: flat_lightning
+    rank: 50
+    weight: 75
+    description: "Adds {value} lightning damage"
+    tags: ["lightning", "attack", "weapon"]
+    modifiers:
+      - attribute: magical_damage
+        mod_type: flat
+        min: 5
+        max: 35
+    requirements:
+      min_level: 30
+      item_types: ["weapon_melee", "weapon_ranged", "weapon_magic"]
+
+  # =============================================================================
+  # SUFFIXES - Attack Stats
+  # =============================================================================
+
+  # Critical Chance (Group: crit_chance)
+  - id: suffix_crit_chance_minor
+    name: "of Precision"
+    type: suffix
+    group: crit_chance
+    rank: 25
+    weight: 100
+    description: "+{value}% critical strike chance"
+    tags: ["critical", "attack"]
+    modifiers:
+      - attribute: crit_chance
+        mod_type: flat
+        min: 1
+        max: 3
+    requirements:
+      min_level: 10
+
+  - id: suffix_crit_chance_moderate
+    name: "of Accuracy"
+    type: suffix
+    group: crit_chance
+    rank: 50
+    weight: 65
+    description: "+{value}% critical strike chance"
+    tags: ["critical", "attack"]
+    modifiers:
+      - attribute: crit_chance
+        mod_type: flat
+        min: 4
+        max: 7
+    requirements:
+      min_level: 35
+
+  - id: suffix_crit_chance_major
+    name: "of Deadliness"
+    type: suffix
+    group: crit_chance
+    rank: 80
+    weight: 35
+    description: "+{value}% critical strike chance"
+    tags: ["critical", "attack", "rare"]
+    modifiers:
+      - attribute: crit_chance
+        mod_type: flat
+        min: 8
+        max: 12
+    requirements:
+      min_level: 60
+
+  # Critical Multiplier (Group: crit_multi)
+  - id: suffix_crit_multi_minor
+    name: "of Force"
+    type: suffix
+    group: crit_multi
+    rank: 30
+    weight: 90
+    description: "+{value}% critical strike multiplier"
+    tags: ["critical", "attack"]
+    modifiers:
+      - attribute: crit_multiplier
+        mod_type: flat
+        min: 10
+        max: 20
+    requirements:
+      min_level: 15
+
+  - id: suffix_crit_multi_major
+    name: "of Destruction"
+    type: suffix
+    group: crit_multi
+    rank: 65
+    weight: 45
+    description: "+{value}% critical strike multiplier"
+    tags: ["critical", "attack"]
+    modifiers:
+      - attribute: crit_multiplier
+        mod_type: flat
+        min: 25
+        max: 45
+    requirements:
+      min_level: 45
+
+  # Attack Speed (Group: attack_speed)
+  - id: suffix_attack_speed_minor
+    name: "of Quickness"
+    type: suffix
+    group: attack_speed
+    rank: 25
+    weight: 100
+    description: "+{value}% increased attack speed"
+    tags: ["speed", "attack"]
+    modifiers:
+      - attribute: attack_speed
+        mod_type: increased
+        min: 3
+        max: 8
+    requirements:
+      min_level: 10
+      item_types: ["weapon_melee", "weapon_ranged"]
+
+  - id: suffix_attack_speed_major
+    name: "of the Wind"
+    type: suffix
+    group: attack_speed
+    rank: 60
+    weight: 50
+    description: "+{value}% increased attack speed"
+    tags: ["speed", "attack"]
+    modifiers:
+      - attribute: attack_speed
+        mod_type: increased
+        min: 12
+        max: 20
+    requirements:
+      min_level: 40
+      item_types: ["weapon_melee", "weapon_ranged"]
+
+  # Life Steal (Group: life_steal)
+  - id: suffix_life_steal_minor
+    name: "of Leeching"
+    type: suffix
+    group: life_steal
+    rank: 35
+    weight: 80
+    description: "+{value}% of damage leeched as life"
+    tags: ["leech", "life", "attack"]
+    modifiers:
+      - attribute: life_steal
+        mod_type: flat
+        min: 1
+        max: 3
+    requirements:
+      min_level: 20
+      item_types: ["weapon_melee"]
+
+  - id: suffix_life_steal_major
+    name: "of Vampirism"
+    type: suffix
+    group: life_steal
+    rank: 70
+    weight: 35
+    description: "+{value}% of damage leeched as life"
+    tags: ["leech", "life", "attack", "rare"]
+    modifiers:
+      - attribute: life_steal
+        mod_type: flat
+        min: 4
+        max: 8
+    requirements:
+      min_level: 50
+      item_types: ["weapon_melee"]

@@ -44,13 +44,18 @@ func (l *BaseLiving) Health() float64 {
 	return l.health
 }
 
-func (l *BaseLiving) Revive(_ context.Context, healthPercent float64) error {
+func (l *BaseLiving) Revive(ctx context.Context, healthPercent float64) error {
 	if healthPercent <= 0 || healthPercent > 1 {
 		return fmt.Errorf("healthPercent must be >0 and <=1")
 	}
 
 	if l.IsAlive() {
 		return nil
+	}
+
+	// Call base entity revive to set isAlive = true
+	if err := l.BaseEntity.Revive(ctx, healthPercent); err != nil {
+		return err
 	}
 
 	maxHP := l.MaxHealth()

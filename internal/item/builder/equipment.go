@@ -18,7 +18,7 @@ type Equipment struct {
 	socketTypes   []item.SocketType
 	requirements  item.EquipRequirements
 	attributes    []attribute.Modifier
-	affixes       []affix.Affix
+	affixes       []affix.Instance
 	onEquip       func(ctx context.Context, entity entity.Entity) error
 	onUnequip     func(ctx context.Context, entity entity.Entity) error
 }
@@ -204,13 +204,33 @@ func (b *Equipment) Attributes(mods ...attribute.Modifier) *Equipment {
 	return b
 }
 
+// Affix adds an affix template, automatically rolling its values
 func (b *Equipment) Affix(a affix.Affix) *Equipment {
-	b.affixes = append(b.affixes, a)
+	rolled := affix.RollModifiers(a.Modifiers())
+	instance := affix.NewBaseInstance(a, rolled)
+	b.affixes = append(b.affixes, instance)
 	return b
 }
 
+// Affixes adds multiple affix templates, automatically rolling their values
 func (b *Equipment) Affixes(affixes ...affix.Affix) *Equipment {
-	b.affixes = append(b.affixes, affixes...)
+	for _, a := range affixes {
+		rolled := affix.RollModifiers(a.Modifiers())
+		instance := affix.NewBaseInstance(a, rolled)
+		b.affixes = append(b.affixes, instance)
+	}
+	return b
+}
+
+// AffixInstance adds an already-rolled affix instance
+func (b *Equipment) AffixInstance(inst affix.Instance) *Equipment {
+	b.affixes = append(b.affixes, inst)
+	return b
+}
+
+// AffixInstances adds multiple already-rolled affix instances
+func (b *Equipment) AffixInstances(instances ...affix.Instance) *Equipment {
+	b.affixes = append(b.affixes, instances...)
 	return b
 }
 

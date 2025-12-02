@@ -1,0 +1,358 @@
+version: "1.0"
+
+affixes:
+  # =============================================================================
+  # PREFIXES - Attributes
+  # =============================================================================
+
+  # Strength (Group: flat_strength)
+  - id: prefix_strength_minor
+    name: "Strong"
+    type: prefix
+    group: flat_strength
+    rank: 15
+    weight: 130
+    description: "+{value} strength"
+    tags: ["strength", "attribute"]
+    modifiers:
+      - attribute: strength
+        mod_type: flat
+        min: 2
+        max: 6
+    requirements:
+      min_level: 1
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_strength_moderate
+    name: "Powerful"
+    type: prefix
+    group: flat_strength
+    rank: 40
+    weight: 85
+    description: "+{value} strength"
+    tags: ["strength", "attribute"]
+    modifiers:
+      - attribute: strength
+        mod_type: flat
+        min: 8
+        max: 16
+    requirements:
+      min_level: 25
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_strength_major
+    name: "Mighty"
+    type: prefix
+    group: flat_strength
+    rank: 70
+    weight: 45
+    description: "+{value} strength"
+    tags: ["strength", "attribute", "rare"]
+    modifiers:
+      - attribute: strength
+        mod_type: flat
+        min: 20
+        max: 35
+    requirements:
+      min_level: 50
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  # Dexterity (Group: flat_dexterity)
+  - id: prefix_dexterity_minor
+    name: "Agile"
+    type: prefix
+    group: flat_dexterity
+    rank: 15
+    weight: 130
+    description: "+{value} dexterity"
+    tags: ["dexterity", "attribute"]
+    modifiers:
+      - attribute: dexterity
+        mod_type: flat
+        min: 2
+        max: 6
+    requirements:
+      min_level: 1
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_dexterity_moderate
+    name: "Swift"
+    type: prefix
+    group: flat_dexterity
+    rank: 40
+    weight: 85
+    description: "+{value} dexterity"
+    tags: ["dexterity", "attribute"]
+    modifiers:
+      - attribute: dexterity
+        mod_type: flat
+        min: 8
+        max: 16
+    requirements:
+      min_level: 25
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_dexterity_major
+    name: "Graceful"
+    type: prefix
+    group: flat_dexterity
+    rank: 70
+    weight: 45
+    description: "+{value} dexterity"
+    tags: ["dexterity", "attribute", "rare"]
+    modifiers:
+      - attribute: dexterity
+        mod_type: flat
+        min: 20
+        max: 35
+    requirements:
+      min_level: 50
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  # Intelligence (Group: flat_intelligence)
+  - id: prefix_intelligence_minor
+    name: "Clever"
+    type: prefix
+    group: flat_intelligence
+    rank: 15
+    weight: 130
+    description: "+{value} intelligence"
+    tags: ["intelligence", "attribute"]
+    modifiers:
+      - attribute: intelligence
+        mod_type: flat
+        min: 2
+        max: 6
+    requirements:
+      min_level: 1
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_intelligence_moderate
+    name: "Wise"
+    type: prefix
+    group: flat_intelligence
+    rank: 40
+    weight: 85
+    description: "+{value} intelligence"
+    tags: ["intelligence", "attribute"]
+    modifiers:
+      - attribute: intelligence
+        mod_type: flat
+        min: 8
+        max: 16
+    requirements:
+      min_level: 25
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_intelligence_major
+    name: "Brilliant"
+    type: prefix
+    group: flat_intelligence
+    rank: 70
+    weight: 45
+    description: "+{value} intelligence"
+    tags: ["intelligence", "attribute", "rare"]
+    modifiers:
+      - attribute: intelligence
+        mod_type: flat
+        min: 20
+        max: 35
+    requirements:
+      min_level: 50
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  # Vitality (Group: flat_vitality)
+  - id: prefix_vitality_minor
+    name: "Healthy"
+    type: prefix
+    group: flat_vitality
+    rank: 15
+    weight: 130
+    description: "+{value} vitality"
+    tags: ["vitality", "attribute", "life"]
+    modifiers:
+      - attribute: vitality
+        mod_type: flat
+        min: 2
+        max: 6
+    requirements:
+      min_level: 1
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_vitality_moderate
+    name: "Robust"
+    type: prefix
+    group: flat_vitality
+    rank: 40
+    weight: 85
+    description: "+{value} vitality"
+    tags: ["vitality", "attribute", "life"]
+    modifiers:
+      - attribute: vitality
+        mod_type: flat
+        min: 8
+        max: 16
+    requirements:
+      min_level: 25
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: prefix_vitality_major
+    name: "Indomitable"
+    type: prefix
+    group: flat_vitality
+    rank: 70
+    weight: 45
+    description: "+{value} vitality"
+    tags: ["vitality", "attribute", "life", "rare"]
+    modifiers:
+      - attribute: vitality
+        mod_type: flat
+        min: 20
+        max: 35
+    requirements:
+      min_level: 50
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  # =============================================================================
+  # SUFFIXES - Utility
+  # =============================================================================
+
+  # Experience Gain (Group: experience)
+  - id: suffix_experience_minor
+    name: "of Learning"
+    type: suffix
+    group: experience
+    rank: 25
+    weight: 90
+    description: "+{value}% experience gained"
+    tags: ["experience", "loot"]
+    modifiers:
+      - attribute: experience_gain
+        mod_type: increased
+        min: 3
+        max: 8
+    requirements:
+      min_level: 1
+      item_types: ["accessory_ring", "accessory_amulet"]
+
+  - id: suffix_experience_major
+    name: "of Wisdom"
+    type: suffix
+    group: experience
+    rank: 60
+    weight: 40
+    description: "+{value}% experience gained"
+    tags: ["experience", "loot", "rare"]
+    modifiers:
+      - attribute: experience_gain
+        mod_type: increased
+        min: 12
+        max: 20
+    requirements:
+      min_level: 40
+      item_types: ["accessory_ring", "accessory_amulet"]
+
+  # Loot Quantity (Group: loot_quantity)
+  - id: suffix_loot_quantity_minor
+    name: "of Plundering"
+    type: suffix
+    group: loot_quantity
+    rank: 30
+    weight: 80
+    description: "+{value}% increased item quantity"
+    tags: ["loot", "gold"]
+    modifiers:
+      - attribute: loot_quantity
+        mod_type: increased
+        min: 3
+        max: 10
+    requirements:
+      min_level: 10
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: suffix_loot_quantity_major
+    name: "of Avarice"
+    type: suffix
+    group: loot_quantity
+    rank: 70
+    weight: 35
+    description: "+{value}% increased item quantity"
+    tags: ["loot", "gold", "rare"]
+    modifiers:
+      - attribute: loot_quantity
+        mod_type: increased
+        min: 15
+        max: 30
+    requirements:
+      min_level: 50
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  # Loot Rarity (Group: loot_rarity)
+  - id: suffix_loot_rarity_minor
+    name: "of Fortune"
+    type: suffix
+    group: loot_rarity
+    rank: 35
+    weight: 75
+    description: "+{value}% increased item rarity"
+    tags: ["loot"]
+    modifiers:
+      - attribute: loot_rarity
+        mod_type: increased
+        min: 5
+        max: 15
+    requirements:
+      min_level: 15
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  - id: suffix_loot_rarity_major
+    name: "of the Prospector"
+    type: suffix
+    group: loot_rarity
+    rank: 75
+    weight: 30
+    description: "+{value}% increased item rarity"
+    tags: ["loot", "rare"]
+    modifiers:
+      - attribute: loot_rarity
+        mod_type: increased
+        min: 25
+        max: 50
+    requirements:
+      min_level: 55
+      item_types: ["accessory_ring", "accessory_amulet", "accessory_belt"]
+
+  # Mana Regeneration (Group: mana_regen)
+  - id: suffix_mana_regen_minor
+    name: "of the Mage"
+    type: suffix
+    group: mana_regen
+    rank: 25
+    weight: 100
+    description: "+{value} mana regenerated per second"
+    tags: ["mana", "regen", "spell"]
+    modifiers:
+      - attribute: mana_regen
+        mod_type: flat
+        min: 1
+        max: 4
+    requirements:
+      min_level: 10
+      item_types: ["accessory_ring", "accessory_amulet"]
+
+  - id: suffix_mana_regen_major
+    name: "of the Archmage"
+    type: suffix
+    group: mana_regen
+    rank: 65
+    weight: 45
+    description: "+{value} mana regenerated per second"
+    tags: ["mana", "regen", "spell", "rare"]
+    modifiers:
+      - attribute: mana_regen
+        mod_type: flat
+        min: 8
+        max: 18
+    requirements:
+      min_level: 45
+      item_types: ["accessory_ring", "accessory_amulet"]

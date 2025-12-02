@@ -1,0 +1,351 @@
+version: "1.0"
+
+affixes:
+  # =============================================================================
+  # PREFIXES - Defense
+  # =============================================================================
+
+  # Flat Armor (Group: flat_armor)
+  - id: prefix_armor_minor
+    name: "Sturdy"
+    type: prefix
+    group: flat_armor
+    rank: 15
+    weight: 150
+    description: "+{value} armor"
+    tags: ["defense", "armor"]
+    modifiers:
+      - attribute: armor
+        mod_type: flat
+        min: 5
+        max: 15
+    requirements:
+      min_level: 1
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  - id: prefix_armor_moderate
+    name: "Reinforced"
+    type: prefix
+    group: flat_armor
+    rank: 40
+    weight: 100
+    description: "+{value} armor"
+    tags: ["defense", "armor"]
+    modifiers:
+      - attribute: armor
+        mod_type: flat
+        min: 20
+        max: 45
+    requirements:
+      min_level: 20
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  - id: prefix_armor_major
+    name: "Fortified"
+    type: prefix
+    group: flat_armor
+    rank: 65
+    weight: 55
+    description: "+{value} armor"
+    tags: ["defense", "armor"]
+    modifiers:
+      - attribute: armor
+        mod_type: flat
+        min: 55
+        max: 95
+    requirements:
+      min_level: 45
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  - id: prefix_armor_supreme
+    name: "Impenetrable"
+    type: prefix
+    group: flat_armor
+    rank: 90
+    weight: 25
+    description: "+{value} armor"
+    tags: ["defense", "armor", "legendary"]
+    modifiers:
+      - attribute: armor
+        mod_type: flat
+        min: 100
+        max: 150
+    requirements:
+      min_level: 70
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  # Evasion (Group: flat_evasion)
+  - id: prefix_evasion_minor
+    name: "Nimble"
+    type: prefix
+    group: flat_evasion
+    rank: 20
+    weight: 130
+    description: "+{value} evasion"
+    tags: ["defense", "evasion"]
+    modifiers:
+      - attribute: evasion
+        mod_type: flat
+        min: 5
+        max: 12
+    requirements:
+      min_level: 5
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  - id: prefix_evasion_moderate
+    name: "Elusive"
+    type: prefix
+    group: flat_evasion
+    rank: 45
+    weight: 85
+    description: "+{value} evasion"
+    tags: ["defense", "evasion"]
+    modifiers:
+      - attribute: evasion
+        mod_type: flat
+        min: 18
+        max: 35
+    requirements:
+      min_level: 25
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  - id: prefix_evasion_major
+    name: "Ethereal"
+    type: prefix
+    group: flat_evasion
+    rank: 75
+    weight: 40
+    description: "+{value} evasion"
+    tags: ["defense", "evasion", "rare"]
+    modifiers:
+      - attribute: evasion
+        mod_type: flat
+        min: 45
+        max: 75
+    requirements:
+      min_level: 55
+      item_types: ["armor_head", "armor_chest", "armor_legs", "armor_feet", "armor_hands"]
+
+  # =============================================================================
+  # SUFFIXES - Resistances
+  # =============================================================================
+
+  # Fire Resistance (Group: fire_resist)
+  - id: suffix_fire_resist_minor
+    name: "of the Salamander"
+    type: suffix
+    group: fire_resist
+    rank: 20
+    weight: 120
+    description: "+{value}% fire resistance"
+    tags: ["resistance", "fire", "defense"]
+    modifiers:
+      - attribute: fire_resist
+        mod_type: flat
+        min: 5
+        max: 12
+    requirements:
+      min_level: 1
+
+  - id: suffix_fire_resist_moderate
+    name: "of Heat Shielding"
+    type: suffix
+    group: fire_resist
+    rank: 45
+    weight: 75
+    description: "+{value}% fire resistance"
+    tags: ["resistance", "fire", "defense"]
+    modifiers:
+      - attribute: fire_resist
+        mod_type: flat
+        min: 15
+        max: 28
+    requirements:
+      min_level: 30
+
+  - id: suffix_fire_resist_major
+    name: "of the Phoenix"
+    type: suffix
+    group: fire_resist
+    rank: 75
+    weight: 35
+    description: "+{value}% fire resistance"
+    tags: ["resistance", "fire", "defense", "rare"]
+    modifiers:
+      - attribute: fire_resist
+        mod_type: flat
+        min: 30
+        max: 45
+    requirements:
+      min_level: 55
+
+  # Cold Resistance (Group: cold_resist)
+  - id: suffix_cold_resist_minor
+    name: "of the Penguin"
+    type: suffix
+    group: cold_resist
+    rank: 20
+    weight: 120
+    description: "+{value}% cold resistance"
+    tags: ["resistance", "cold", "defense"]
+    modifiers:
+      - attribute: cold_resist
+        mod_type: flat
+        min: 5
+        max: 12
+    requirements:
+      min_level: 1
+
+  - id: suffix_cold_resist_moderate
+    name: "of Frost Warding"
+    type: suffix
+    group: cold_resist
+    rank: 45
+    weight: 75
+    description: "+{value}% cold resistance"
+    tags: ["resistance", "cold", "defense"]
+    modifiers:
+      - attribute: cold_resist
+        mod_type: flat
+        min: 15
+        max: 28
+    requirements:
+      min_level: 30
+
+  # Lightning Resistance (Group: lightning_resist)
+  - id: suffix_lightning_resist_minor
+    name: "of Grounding"
+    type: suffix
+    group: lightning_resist
+    rank: 20
+    weight: 120
+    description: "+{value}% lightning resistance"
+    tags: ["resistance", "lightning", "defense"]
+    modifiers:
+      - attribute: lightning_resist
+        mod_type: flat
+        min: 5
+        max: 12
+    requirements:
+      min_level: 1
+
+  - id: suffix_lightning_resist_moderate
+    name: "of Insulation"
+    type: suffix
+    group: lightning_resist
+    rank: 45
+    weight: 75
+    description: "+{value}% lightning resistance"
+    tags: ["resistance", "lightning", "defense"]
+    modifiers:
+      - attribute: lightning_resist
+        mod_type: flat
+        min: 15
+        max: 28
+    requirements:
+      min_level: 30
+
+  # Poison Resistance (Group: poison_resist)
+  - id: suffix_poison_resist_minor
+    name: "of the Snake"
+    type: suffix
+    group: poison_resist
+    rank: 20
+    weight: 110
+    description: "+{value}% poison resistance"
+    tags: ["resistance", "poison", "defense"]
+    modifiers:
+      - attribute: poison_resist
+        mod_type: flat
+        min: 5
+        max: 12
+    requirements:
+      min_level: 1
+
+  # =============================================================================
+  # SUFFIXES - Life and Regeneration
+  # =============================================================================
+
+  # Life Regeneration (Group: life_regen)
+  - id: suffix_life_regen_minor
+    name: "of Regeneration"
+    type: suffix
+    group: life_regen
+    rank: 25
+    weight: 100
+    description: "+{value} life regenerated per second"
+    tags: ["life", "regen", "defense"]
+    modifiers:
+      - attribute: life_regen
+        mod_type: flat
+        min: 1
+        max: 4
+    requirements:
+      min_level: 10
+
+  - id: suffix_life_regen_moderate
+    name: "of Restoration"
+    type: suffix
+    group: life_regen
+    rank: 50
+    weight: 60
+    description: "+{value} life regenerated per second"
+    tags: ["life", "regen", "defense"]
+    modifiers:
+      - attribute: life_regen
+        mod_type: flat
+        min: 6
+        max: 15
+    requirements:
+      min_level: 35
+
+  - id: suffix_life_regen_major
+    name: "of the Troll"
+    type: suffix
+    group: life_regen
+    rank: 80
+    weight: 30
+    description: "+{value} life regenerated per second"
+    tags: ["life", "regen", "defense", "rare"]
+    modifiers:
+      - attribute: life_regen
+        mod_type: flat
+        min: 18
+        max: 30
+    requirements:
+      min_level: 60
+
+  # Movement Speed (Group: movement)
+  - id: suffix_movement_minor
+    name: "of the Traveler"
+    type: suffix
+    group: movement
+    rank: 30
+    weight: 80
+    description: "+{value}% movement speed"
+    tags: ["movement", "speed"]
+    modifiers:
+      - attribute: movement_speed
+        mod_type: increased
+        min: 3
+        max: 8
+    requirements:
+      min_level: 15
+      slots: ["feet"]
+
+  - id: suffix_movement_major
+    name: "of the Cheetah"
+    type: suffix
+    group: movement
+    rank: 65
+    weight: 35
+    description: "+{value}% movement speed"
+    tags: ["movement", "speed", "rare"]
+    modifiers:
+      - attribute: movement_speed
+        mod_type: increased
+        min: 12
+        max: 20
+    requirements:
+      min_level: 45
+      slots: ["feet"]

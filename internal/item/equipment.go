@@ -65,7 +65,7 @@ func NewEquipmentWithConfig(cfg EquipmentConfig) *BaseEquipment {
 		maxDurability: cfg.MaxDurability,
 		sockets:       make([]Socketable, cfg.SocketCount),
 		socketTypes:   cfg.SocketTypes,
-		affixSet:      affix.NewAffixSet(),
+		affixSet:      affix.NewBaseSet(),
 		requirements:  cfg.Requirements,
 	}
 
@@ -471,7 +471,7 @@ func (be *BaseEquipment) Clone() any {
 		maxDurability: be.maxDurability,
 		sockets:       make([]Socketable, len(be.sockets)),
 		socketTypes:   make([]SocketType, len(be.socketTypes)),
-		affixSet:      affix.NewAffixSet(),
+		affixSet:      affix.NewBaseSet(),
 		requirements:  be.requirements, // Requirements typically shared
 	}
 
@@ -545,7 +545,7 @@ func (be *BaseEquipment) Marshal() ([]byte, error) {
 	var affixIDs []string
 	if be.affixSet != nil {
 		for _, a := range be.affixSet.GetAll() {
-			affixIDs = append(affixIDs, a.ID())
+			affixIDs = append(affixIDs, a.AffixID())
 		}
 	}
 
@@ -614,7 +614,7 @@ func (be *BaseEquipment) Unmarshal(data []byte) error {
 	be.sockets = make([]Socketable, len(state.SocketIDs))
 
 	// Initialize affix set (actual affixes restored separately)
-	be.affixSet = affix.NewAffixSet()
+	be.affixSet = affix.NewBaseSet()
 
 	// Restore requirements
 	if state.ReqAttrs != nil {
