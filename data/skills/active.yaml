@@ -1,0 +1,381 @@
+version: "1.0"
+
+skills:
+  # =============================================================================
+  # COMBAT SKILLS
+  # =============================================================================
+
+  - id: shield_wall
+    name: "Shield Wall"
+    description: "Raise your shield, blocking incoming damage for {duration} seconds."
+    type: active
+    tags: [defense, melee, buff, shield]
+    icon: "skill_shield_wall"
+    max_level: 5
+    cooldown: 15000
+    targeting:
+      type: self
+    effects:
+      - id: block_buff
+        type: buff
+        duration: 3000
+        metadata:
+          block_chance_bonus: 50
+          damage_reduction: 0.2
+    levels:
+      - level: 1
+        costs:
+          - resource: stamina
+            type: flat
+            amount: 20
+        effects:
+          - effect_id: block_buff
+            values:
+              duration: 3000
+              block_chance_bonus: 50
+              damage_reduction: 0.2
+        description: "Block chance +50%, damage reduction 20% for 3s"
+      - level: 2
+        costs:
+          - resource: stamina
+            type: flat
+            amount: 25
+        effects:
+          - effect_id: block_buff
+            values:
+              duration: 3500
+              block_chance_bonus: 55
+              damage_reduction: 0.25
+        description: "Block chance +55%, damage reduction 25% for 3.5s"
+      - level: 3
+        costs:
+          - resource: stamina
+            type: flat
+            amount: 30
+        effects:
+          - effect_id: block_buff
+            values:
+              duration: 4000
+              block_chance_bonus: 60
+              damage_reduction: 0.30
+        description: "Block chance +60%, damage reduction 30% for 4s"
+      - level: 4
+        costs:
+          - resource: stamina
+            type: flat
+            amount: 35
+        effects:
+          - effect_id: block_buff
+            values:
+              duration: 4500
+              block_chance_bonus: 65
+              damage_reduction: 0.35
+        description: "Block chance +65%, damage reduction 35% for 4.5s"
+      - level: 5
+        costs:
+          - resource: stamina
+            type: flat
+            amount: 40
+        effects:
+          - effect_id: block_buff
+            values:
+              duration: 5000
+              block_chance_bonus: 75
+              damage_reduction: 0.40
+        description: "Block chance +75%, damage reduction 40% for 5s"
+
+  - id: fireball
+    name: "Fireball"
+    description: "Hurl a ball of fire dealing {damage} fire damage. Burns enemies for additional damage."
+    type: active
+    tags: [fire, spell, damage, projectile, aoe]
+    icon: "skill_fireball"
+    max_level: 5
+    cooldown: 3000
+    targeting:
+      type: single
+      area_type: circle
+      range: 25
+      area_radius: 3
+      can_enemies: true
+      requires_los: true
+    effects:
+      - id: fire_damage
+        type: damage
+        damage_type: fire
+        scaling:
+          - attribute: intelligence
+            multiplier: 0.8
+      - id: burning
+        type: status
+        status_id: burning
+        chance: 0.25
+        duration: 4000
+    levels:
+      - level: 1
+        costs:
+          - resource: mana
+            type: flat
+            amount: 15
+        effects:
+          - effect_id: fire_damage
+            values:
+              base_damage: 25
+          - effect_id: burning
+            values:
+              chance: 0.25
+              damage_per_second: 5
+        description: "25 fire damage, 25% chance to burn"
+      - level: 2
+        costs:
+          - resource: mana
+            type: flat
+            amount: 20
+        effects:
+          - effect_id: fire_damage
+            values:
+              base_damage: 40
+          - effect_id: burning
+            values:
+              chance: 0.30
+              damage_per_second: 8
+        description: "40 fire damage, 30% chance to burn"
+      - level: 3
+        costs:
+          - resource: mana
+            type: flat
+            amount: 28
+        effects:
+          - effect_id: fire_damage
+            values:
+              base_damage: 60
+          - effect_id: burning
+            values:
+              chance: 0.35
+              damage_per_second: 12
+        description: "60 fire damage, 35% chance to burn"
+      - level: 4
+        costs:
+          - resource: mana
+            type: flat
+            amount: 38
+        effects:
+          - effect_id: fire_damage
+            values:
+              base_damage: 85
+          - effect_id: burning
+            values:
+              chance: 0.40
+              damage_per_second: 16
+        description: "85 fire damage, 40% chance to burn"
+      - level: 5
+        costs:
+          - resource: mana
+            type: flat
+            amount: 50
+        effects:
+          - effect_id: fire_damage
+            values:
+              base_damage: 120
+          - effect_id: burning
+            values:
+              chance: 0.50
+              damage_per_second: 22
+        description: "120 fire damage, 50% chance to burn"
+
+  - id: healing_touch
+    name: "Healing Touch"
+    description: "Restore {healing} health to target ally."
+    type: active
+    tags: [heal, support, holy]
+    icon: "skill_healing_touch"
+    max_level: 5
+    cooldown: 5000
+    targeting:
+      type: single
+      range: 15
+      can_self: true
+      can_allies: true
+    effects:
+      - id: heal
+        type: heal
+        scaling:
+          - attribute: intelligence
+            multiplier: 0.5
+          - attribute: willpower
+            multiplier: 0.3
+    levels:
+      - level: 1
+        costs:
+          - resource: mana
+            type: flat
+            amount: 20
+        effects:
+          - effect_id: heal
+            values:
+              base_healing: 30
+        description: "Heal for 30 health"
+      - level: 2
+        costs:
+          - resource: mana
+            type: flat
+            amount: 28
+        effects:
+          - effect_id: heal
+            values:
+              base_healing: 50
+        description: "Heal for 50 health"
+      - level: 3
+        costs:
+          - resource: mana
+            type: flat
+            amount: 38
+        effects:
+          - effect_id: heal
+            values:
+              base_healing: 75
+        description: "Heal for 75 health"
+      - level: 4
+        costs:
+          - resource: mana
+            type: flat
+            amount: 50
+        effects:
+          - effect_id: heal
+            values:
+              base_healing: 105
+        description: "Heal for 105 health"
+      - level: 5
+        costs:
+          - resource: mana
+            type: flat
+            amount: 65
+        effects:
+          - effect_id: heal
+            values:
+              base_healing: 150
+        description: "Heal for 150 health"
+
+  - id: chain_lightning
+    name: "Chain Lightning"
+    description: "Unleash lightning that chains between {chains} enemies."
+    type: active
+    tags: [lightning, spell, damage, chain]
+    icon: "skill_chain_lightning"
+    max_level: 3
+    cooldown: 6000
+    targeting:
+      type: single
+      area_type: chain
+      range: 20
+      can_enemies: true
+      requires_los: true
+      chain_count: 3
+      chain_falloff: 0.25
+    effects:
+      - id: lightning_damage
+        type: damage
+        damage_type: lightning
+        scaling:
+          - attribute: intelligence
+            multiplier: 1.0
+      - id: shock
+        type: status
+        status_id: shocked
+        chance: 0.15
+    levels:
+      - level: 1
+        costs:
+          - resource: mana
+            type: flat
+            amount: 30
+        effects:
+          - effect_id: lightning_damage
+            values:
+              base_damage: 35
+              chain_count: 3
+          - effect_id: shock
+            values:
+              chance: 0.15
+        description: "35 lightning damage, chains to 3 enemies"
+      - level: 2
+        costs:
+          - resource: mana
+            type: flat
+            amount: 45
+        effects:
+          - effect_id: lightning_damage
+            values:
+              base_damage: 55
+              chain_count: 4
+          - effect_id: shock
+            values:
+              chance: 0.20
+        description: "55 lightning damage, chains to 4 enemies"
+      - level: 3
+        costs:
+          - resource: mana
+            type: flat
+            amount: 65
+        effects:
+          - effect_id: lightning_damage
+            values:
+              base_damage: 80
+              chain_count: 5
+          - effect_id: shock
+            values:
+              chance: 0.25
+        description: "80 lightning damage, chains to 5 enemies"
+
+  - id: blood_sacrifice
+    name: "Blood Sacrifice"
+    description: "Sacrifice your health to empower your next attack."
+    type: active
+    tags: [shadow, melee, buff, sacrifice]
+    icon: "skill_blood_sacrifice"
+    max_level: 3
+    cooldown: 10000
+    targeting:
+      type: self
+    effects:
+      - id: health_cost
+        type: resource
+        metadata:
+          drain: true
+      - id: damage_buff
+        type: buff
+        duration: 8000
+    levels:
+      - level: 1
+        costs:
+          - resource: health
+            type: percent
+            amount: 10
+        effects:
+          - effect_id: damage_buff
+            values:
+              damage_increase: 0.25
+              duration: 8000
+        description: "Sacrifice 10% HP, +25% damage for 8s"
+      - level: 2
+        costs:
+          - resource: health
+            type: percent
+            amount: 15
+        effects:
+          - effect_id: damage_buff
+            values:
+              damage_increase: 0.40
+              duration: 10000
+        description: "Sacrifice 15% HP, +40% damage for 10s"
+      - level: 3
+        costs:
+          - resource: health
+            type: percent
+            amount: 20
+        effects:
+          - effect_id: damage_buff
+            values:
+              damage_increase: 0.60
+              duration: 12000
+        description: "Sacrifice 20% HP, +60% damage for 12s"

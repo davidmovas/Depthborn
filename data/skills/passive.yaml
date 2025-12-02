@@ -1,0 +1,312 @@
+version: "1.0"
+
+skills:
+  # =============================================================================
+  # PASSIVE SKILLS (from skill tree nodes)
+  # =============================================================================
+
+  - id: toughness
+    name: "Toughness"
+    description: "+{value} maximum health"
+    type: passive
+    tags: [defense, life, basic]
+    icon: "passive_toughness"
+    max_level: 0  # No levels, just allocated or not
+    effects:
+      - id: health_bonus
+        type: buff
+        metadata:
+          attribute: max_health
+          mod_type: flat
+          value: 10
+
+  - id: strength_training
+    name: "Strength Training"
+    description: "+{value} strength"
+    type: passive
+    tags: [attribute, strength, basic]
+    icon: "passive_strength"
+    max_level: 0
+    effects:
+      - id: str_bonus
+        type: buff
+        metadata:
+          attribute: strength
+          mod_type: flat
+          value: 2
+
+  - id: quick_reflexes
+    name: "Quick Reflexes"
+    description: "+{value}% evasion rating"
+    type: passive
+    tags: [defense, evasion, basic]
+    icon: "passive_evasion"
+    max_level: 0
+    effects:
+      - id: evasion_bonus
+        type: buff
+        metadata:
+          attribute: evasion
+          mod_type: increased
+          value: 5
+
+  - id: fire_mastery
+    name: "Fire Mastery"
+    description: "+{value}% fire damage"
+    type: passive
+    tags: [fire, damage, notable]
+    icon: "passive_fire_mastery"
+    max_level: 3
+    levels:
+      - level: 1
+        effects:
+          - effect_id: fire_bonus
+            values:
+              fire_damage_increase: 0.10
+        description: "+10% fire damage"
+      - level: 2
+        effects:
+          - effect_id: fire_bonus
+            values:
+              fire_damage_increase: 0.20
+        description: "+20% fire damage"
+      - level: 3
+        effects:
+          - effect_id: fire_bonus
+            values:
+              fire_damage_increase: 0.35
+        description: "+35% fire damage"
+    effects:
+      - id: fire_bonus
+        type: buff
+        metadata:
+          damage_type: fire
+          mod_type: increased
+
+  - id: iron_skin
+    name: "Iron Skin"
+    description: "+{value}% armor from equipped items"
+    type: passive
+    tags: [defense, armor, notable]
+    icon: "passive_iron_skin"
+    max_level: 0
+    effects:
+      - id: armor_bonus
+        type: buff
+        metadata:
+          attribute: armor
+          mod_type: increased
+          value: 15
+
+  - id: critical_mastery
+    name: "Critical Mastery"
+    description: "+{crit}% critical chance, +{multi}% critical multiplier"
+    type: passive
+    tags: [attack, critical, notable]
+    icon: "passive_crit_mastery"
+    max_level: 0
+    effects:
+      - id: crit_chance
+        type: buff
+        metadata:
+          attribute: crit_chance
+          mod_type: flat
+          value: 3
+      - id: crit_multi
+        type: buff
+        metadata:
+          attribute: crit_multiplier
+          mod_type: flat
+          value: 15
+
+  # =============================================================================
+  # KEYSTONE PASSIVES (game-changing)
+  # =============================================================================
+
+  - id: blood_magic
+    name: "Blood Magic"
+    description: "Skills cost health instead of mana. +20% maximum health."
+    type: passive
+    tags: [keystone, shadow, life]
+    icon: "keystone_blood_magic"
+    max_level: 0
+    effects:
+      - id: blood_magic_effect
+        type: modify_skill
+        metadata:
+          convert_resource: true
+          from_resource: mana
+          to_resource: health
+      - id: health_bonus
+        type: buff
+        metadata:
+          attribute: max_health
+          mod_type: increased
+          value: 20
+
+  - id: glass_cannon
+    name: "Glass Cannon"
+    description: "+50% damage dealt. +25% damage taken."
+    type: passive
+    tags: [keystone, damage]
+    icon: "keystone_glass_cannon"
+    max_level: 0
+    effects:
+      - id: damage_bonus
+        type: buff
+        metadata:
+          attribute: damage_dealt
+          mod_type: more
+          value: 50
+      - id: damage_taken
+        type: debuff
+        metadata:
+          attribute: damage_taken
+          mod_type: more
+          value: 25
+
+  - id: elemental_equilibrium
+    name: "Elemental Equilibrium"
+    description: "Hitting an enemy with an element gives them -25% resistance to other elements, but +40% to that element."
+    type: passive
+    tags: [keystone, elemental, spell]
+    icon: "keystone_elem_eq"
+    max_level: 0
+    effects:
+      - id: elem_eq_trigger
+        type: status
+        metadata:
+          trigger: on_elemental_hit
+          debuff_other_resist: -25
+          buff_same_resist: 40
+          duration: 5000
+
+  - id: unwavering_stance
+    name: "Unwavering Stance"
+    description: "Cannot evade attacks. Cannot be stunned."
+    type: passive
+    tags: [keystone, defense, melee]
+    icon: "keystone_unwavering"
+    max_level: 0
+    effects:
+      - id: no_evade
+        type: debuff
+        metadata:
+          attribute: evasion
+          mod_type: override
+          value: 0
+      - id: stun_immunity
+        type: buff
+        metadata:
+          immunity: stun
+
+  # =============================================================================
+  # CRAFTING/TRADING PASSIVES
+  # =============================================================================
+
+  - id: bargain_hunter
+    name: "Bargain Hunter"
+    description: "All purchases cost {value} gold less (minimum 1)"
+    type: passive
+    tags: [trading, gold, basic]
+    icon: "passive_bargain"
+    max_level: 5
+    levels:
+      - level: 1
+        effects:
+          - effect_id: gold_discount
+            values:
+              flat_discount: 50
+        description: "50 gold discount on purchases"
+      - level: 2
+        effects:
+          - effect_id: gold_discount
+            values:
+              flat_discount: 100
+        description: "100 gold discount on purchases"
+      - level: 3
+        effects:
+          - effect_id: gold_discount
+            values:
+              flat_discount: 175
+        description: "175 gold discount on purchases"
+      - level: 4
+        effects:
+          - effect_id: gold_discount
+            values:
+              flat_discount: 275
+        description: "275 gold discount on purchases"
+      - level: 5
+        effects:
+          - effect_id: gold_discount
+            values:
+              flat_discount: 400
+        description: "400 gold discount on purchases"
+    effects:
+      - id: gold_discount
+        type: buff
+        metadata:
+          affects: purchase_cost
+          mod_type: flat
+
+  - id: master_crafter
+    name: "Master Crafter"
+    description: "+{value}% chance for bonus crafting outcome"
+    type: passive
+    tags: [crafting, notable]
+    icon: "passive_crafter"
+    max_level: 3
+    levels:
+      - level: 1
+        effects:
+          - effect_id: craft_bonus
+            values:
+              bonus_chance: 0.10
+        description: "+10% bonus craft chance"
+      - level: 2
+        effects:
+          - effect_id: craft_bonus
+            values:
+              bonus_chance: 0.20
+        description: "+20% bonus craft chance"
+      - level: 3
+        effects:
+          - effect_id: craft_bonus
+            values:
+              bonus_chance: 0.35
+        description: "+35% bonus craft chance"
+    effects:
+      - id: craft_bonus
+        type: buff
+        metadata:
+          affects: crafting_bonus_chance
+
+  - id: lucky_find
+    name: "Lucky Find"
+    description: "+{value}% increased item quantity from drops"
+    type: passive
+    tags: [loot, basic]
+    icon: "passive_lucky"
+    max_level: 0
+    effects:
+      - id: iiq_bonus
+        type: buff
+        metadata:
+          attribute: loot_quantity
+          mod_type: increased
+          value: 5
+
+  - id: treasure_hunter
+    name: "Treasure Hunter"
+    description: "+{value}% increased item rarity from drops"
+    type: passive
+    tags: [loot, notable]
+    icon: "passive_treasure"
+    max_level: 0
+    effects:
+      - id: iir_bonus
+        type: buff
+        metadata:
+          attribute: loot_rarity
+          mod_type: increased
+          value: 15
