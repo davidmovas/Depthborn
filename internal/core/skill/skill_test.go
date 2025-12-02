@@ -3,61 +3,45 @@ package skill
 import (
 	"context"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestBaseDef(t *testing.T) {
-	t.Run("create basic skill definition", func(t *testing.T) {
-		def := NewBaseDef(DefConfig{
-			ID:           "test_skill",
-			Name:         "Test Skill",
-			Description:  "A test skill",
-			Type:         TypeActive,
-			Tags:         []string{"fire", "spell"},
-			MaxLevel:     5,
-			BaseCooldown: 3000,
-		})
+	t.Run("создание", func(t *testing.T) {
+		t.Run("базовое определение", func(t *testing.T) {
+			def := NewBaseDef(DefConfig{
+				ID:           "test_skill",
+				Name:         "Test Skill",
+				Description:  "A test skill",
+				Type:         TypeActive,
+				Tags:         []string{"fire", "spell"},
+				MaxLevel:     5,
+				BaseCooldown: 3000,
+			})
 
-		if def.ID() != "test_skill" {
-			t.Errorf("expected ID 'test_skill', got %q", def.ID())
-		}
-		if def.Name() != "Test Skill" {
-			t.Errorf("expected name 'Test Skill', got %q", def.Name())
-		}
-		if def.Type() != TypeActive {
-			t.Errorf("expected type TypeActive, got %v", def.Type())
-		}
-		if def.MaxLevel() != 5 {
-			t.Errorf("expected max level 5, got %d", def.MaxLevel())
-		}
-		if def.BaseCooldown() != 3000 {
-			t.Errorf("expected cooldown 3000, got %d", def.BaseCooldown())
-		}
+			require.Equal(t, "test_skill", def.ID())
+			require.Equal(t, "Test Skill", def.Name())
+			require.Equal(t, TypeActive, def.Type())
+			require.Equal(t, 5, def.MaxLevel())
+			require.Equal(t, int64(3000), def.BaseCooldown())
+		})
 	})
 
-	t.Run("skill tags", func(t *testing.T) {
+	t.Run("теги", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:   "tagged_skill",
 			Name: "Tagged Skill",
 			Tags: []string{"fire", "spell", "aoe"},
 		})
 
-		if !def.HasTag("fire") {
-			t.Error("expected skill to have 'fire' tag")
-		}
-		if !def.HasTag("spell") {
-			t.Error("expected skill to have 'spell' tag")
-		}
-		if def.HasTag("cold") {
-			t.Error("expected skill to NOT have 'cold' tag")
-		}
-
-		tags := def.Tags()
-		if len(tags) != 3 {
-			t.Errorf("expected 3 tags, got %d", len(tags))
-		}
+		require.True(t, def.Tags().Has("fire"))
+		require.True(t, def.Tags().Has("spell"))
+		require.False(t, def.Tags().Has("cold"))
+		require.Len(t, def.Tags().All(), 3)
 	})
 
-	t.Run("skill with level data", func(t *testing.T) {
+	t.Run("данные уровней", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:       "leveled_skill",
 			Name:     "Leveled Skill",
@@ -81,30 +65,20 @@ func TestBaseDef(t *testing.T) {
 		}))
 
 		level1 := def.LevelData(1)
-		if level1 == nil {
-			t.Fatal("expected level 1 data to exist")
-		}
-		if level1.Description() != "Level 1" {
-			t.Errorf("expected description 'Level 1', got %q", level1.Description())
-		}
+		require.NotNil(t, level1)
+		require.Equal(t, "Level 1", level1.Description())
 
 		costs := level1.ResourceCosts()
-		if len(costs) != 1 {
-			t.Fatalf("expected 1 cost, got %d", len(costs))
-		}
-		if costs[0].Amount != 10 {
-			t.Errorf("expected cost 10, got %f", costs[0].Amount)
-		}
+		require.Len(t, costs, 1)
+		require.Equal(t, float64(10), costs[0].Amount)
 
 		level3 := def.LevelData(3)
-		if level3 != nil {
-			t.Error("expected level 3 data to be nil")
-		}
+		require.Nil(t, level3)
 	})
 }
 
 func TestBaseInstance(t *testing.T) {
-	t.Run("create instance from definition", func(t *testing.T) {
+	t.Run("создание из определения", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:           "test_skill",
 			Name:         "Test Skill",
@@ -117,18 +91,12 @@ func TestBaseInstance(t *testing.T) {
 			StartLevel: 1,
 		})
 
-		if inst.DefID() != "test_skill" {
-			t.Errorf("expected def ID 'test_skill', got %q", inst.DefID())
-		}
-		if inst.Level() != 1 {
-			t.Errorf("expected level 1, got %d", inst.Level())
-		}
-		if !inst.CanLevelUp() {
-			t.Error("expected CanLevelUp to be true")
-		}
+		require.Equal(t, "test_skill", inst.DefID())
+		require.Equal(t, 1, inst.Level())
+		require.True(t, inst.CanLevelUp())
 	})
 
-	t.Run("level up skill", func(t *testing.T) {
+	t.Run("повышение уровня", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:       "levelable",
 			Name:     "Levelable Skill",
@@ -140,32 +108,17 @@ func TestBaseInstance(t *testing.T) {
 			StartLevel: 1,
 		})
 
-		if err := inst.LevelUp(); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if inst.Level() != 2 {
-			t.Errorf("expected level 2, got %d", inst.Level())
-		}
+		require.NoError(t, inst.LevelUp())
+		require.Equal(t, 2, inst.Level())
 
-		if err := inst.LevelUp(); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if inst.Level() != 3 {
-			t.Errorf("expected level 3, got %d", inst.Level())
-		}
+		require.NoError(t, inst.LevelUp())
+		require.Equal(t, 3, inst.Level())
 
-		// Should not be able to level up at max
-		if inst.CanLevelUp() {
-			t.Error("expected CanLevelUp to be false at max level")
-		}
-
-		err := inst.LevelUp()
-		if err != ErrMaxLevel {
-			t.Errorf("expected ErrMaxLevel, got %v", err)
-		}
+		require.False(t, inst.CanLevelUp())
+		require.ErrorIs(t, inst.LevelUp(), ErrMaxLevel)
 	})
 
-	t.Run("cooldown management", func(t *testing.T) {
+	t.Run("cooldown система", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:           "cooldown_skill",
 			Name:         "Cooldown Skill",
@@ -177,31 +130,28 @@ func TestBaseInstance(t *testing.T) {
 			StartLevel: 1,
 		})
 
-		if inst.IsOnCooldown() {
-			t.Error("expected not on cooldown initially")
-		}
+		t.Run("начальное состояние", func(t *testing.T) {
+			require.False(t, inst.IsOnCooldown())
+		})
 
-		inst.SetCooldown(5000)
-		if !inst.IsOnCooldown() {
-			t.Error("expected on cooldown after setting")
-		}
-		if inst.Cooldown() != 5000 {
-			t.Errorf("expected cooldown 5000, got %d", inst.Cooldown())
-		}
+		t.Run("после активации", func(t *testing.T) {
+			inst.SetCooldown(5000)
+			require.True(t, inst.IsOnCooldown())
+			require.Equal(t, int64(5000), inst.Cooldown())
+		})
 
-		// Update to reduce cooldown
-		inst.Update(2000)
-		if inst.Cooldown() != 3000 {
-			t.Errorf("expected cooldown 3000 after update, got %d", inst.Cooldown())
-		}
+		t.Run("уменьшение со временем", func(t *testing.T) {
+			inst.Update(2000)
+			require.Equal(t, int64(3000), inst.Cooldown())
+		})
 
-		inst.Update(3000)
-		if inst.IsOnCooldown() {
-			t.Error("expected not on cooldown after full update")
-		}
+		t.Run("полное восстановление", func(t *testing.T) {
+			inst.Update(3000)
+			require.False(t, inst.IsOnCooldown())
+		})
 	})
 
-	t.Run("charge system", func(t *testing.T) {
+	t.Run("система зарядов", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:             "charge_skill",
 			Name:           "Charge Skill",
@@ -214,44 +164,31 @@ func TestBaseInstance(t *testing.T) {
 			StartLevel: 1,
 		})
 
-		if inst.Charges() != 3 {
-			t.Errorf("expected 3 charges, got %d", inst.Charges())
-		}
-		if inst.MaxCharges() != 3 {
-			t.Errorf("expected max charges 3, got %d", inst.MaxCharges())
-		}
+		t.Run("начальное количество", func(t *testing.T) {
+			require.Equal(t, 3, inst.Charges())
+			require.Equal(t, 3, inst.MaxCharges())
+		})
 
-		// Use charges
-		if !inst.UseCharge() {
-			t.Error("expected UseCharge to succeed")
-		}
-		if inst.Charges() != 2 {
-			t.Errorf("expected 2 charges, got %d", inst.Charges())
-		}
+		t.Run("использование зарядов", func(t *testing.T) {
+			require.True(t, inst.UseCharge())
+			require.Equal(t, 2, inst.Charges())
 
-		inst.UseCharge()
-		inst.UseCharge()
-		if inst.Charges() != 0 {
-			t.Errorf("expected 0 charges, got %d", inst.Charges())
-		}
+			inst.UseCharge()
+			inst.UseCharge()
+			require.Equal(t, 0, inst.Charges())
+			require.False(t, inst.UseCharge())
+		})
 
-		if inst.UseCharge() {
-			t.Error("expected UseCharge to fail with 0 charges")
-		}
+		t.Run("восстановление зарядов", func(t *testing.T) {
+			inst.Update(2000)
+			require.Equal(t, 1, inst.Charges())
 
-		// Recovery
-		inst.Update(2000) // One charge recovered
-		if inst.Charges() != 1 {
-			t.Errorf("expected 1 charge after recovery, got %d", inst.Charges())
-		}
-
-		inst.Update(4000) // Two more charges recovered
-		if inst.Charges() != 3 {
-			t.Errorf("expected 3 charges after full recovery, got %d", inst.Charges())
-		}
+			inst.Update(4000)
+			require.Equal(t, 3, inst.Charges())
+		})
 	})
 
-	t.Run("skill activation", func(t *testing.T) {
+	t.Run("активация скилла", func(t *testing.T) {
 		def := NewBaseDef(DefConfig{
 			ID:           "usable_skill",
 			Name:         "Usable Skill",
@@ -273,53 +210,32 @@ func TestBaseInstance(t *testing.T) {
 
 		ctx := context.Background()
 
-		if !inst.CanUse(ctx, "player1") {
-			t.Error("expected CanUse to be true")
-		}
+		require.True(t, inst.CanUse(ctx, "player1"))
 
 		result, err := inst.Use(ctx, "player1", ActivationParams{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !result.Success {
-			t.Error("expected skill use to succeed")
-		}
+		require.NoError(t, err)
+		require.True(t, result.Success)
 
-		// Should be on cooldown now
-		if !inst.IsOnCooldown() {
-			t.Error("expected on cooldown after use")
-		}
-
-		// Can't use while on cooldown
-		if inst.CanUse(ctx, "player1") {
-			t.Error("expected CanUse to be false while on cooldown")
-		}
+		require.True(t, inst.IsOnCooldown())
+		require.False(t, inst.CanUse(ctx, "player1"))
 	})
 }
 
 func TestBaseTargetRule(t *testing.T) {
-	t.Run("single target rule", func(t *testing.T) {
+	t.Run("single target", func(t *testing.T) {
 		rule := NewBaseTargetRule(TargetRuleConfig{
 			Type:       TargetSingle,
 			Range:      20,
 			CanEnemies: true,
 		})
 
-		if rule.Type() != TargetSingle {
-			t.Errorf("expected TargetSingle, got %v", rule.Type())
-		}
-		if rule.Range() != 20 {
-			t.Errorf("expected range 20, got %f", rule.Range())
-		}
-		if !rule.CanTargetEnemies() {
-			t.Error("expected CanTargetEnemies to be true")
-		}
-		if rule.CanTargetAllies() {
-			t.Error("expected CanTargetAllies to be false")
-		}
+		require.Equal(t, TargetSingle, rule.Type())
+		require.Equal(t, float64(20), rule.Range())
+		require.True(t, rule.CanTargetEnemies())
+		require.False(t, rule.CanTargetAllies())
 	})
 
-	t.Run("aoe rule", func(t *testing.T) {
+	t.Run("AoE", func(t *testing.T) {
 		rule := NewBaseTargetRule(TargetRuleConfig{
 			Type:        TargetGround,
 			AreaType:    AreaCircle,
@@ -332,21 +248,13 @@ func TestBaseTargetRule(t *testing.T) {
 			RequiresLOS: true,
 		})
 
-		if rule.AreaType() != AreaCircle {
-			t.Errorf("expected AreaCircle, got %v", rule.AreaType())
-		}
-		if rule.AreaRadius() != 5 {
-			t.Errorf("expected area radius 5, got %f", rule.AreaRadius())
-		}
-		if rule.MaxTargets() != 10 {
-			t.Errorf("expected max targets 10, got %d", rule.MaxTargets())
-		}
-		if !rule.RequiresLineOfSight() {
-			t.Error("expected RequiresLineOfSight to be true")
-		}
+		require.Equal(t, AreaCircle, rule.AreaType())
+		require.Equal(t, float64(5), rule.AreaRadius())
+		require.Equal(t, 10, rule.MaxTargets())
+		require.True(t, rule.RequiresLineOfSight())
 	})
 
-	t.Run("chain rule", func(t *testing.T) {
+	t.Run("chain", func(t *testing.T) {
 		rule := NewBaseTargetRule(TargetRuleConfig{
 			Type:        TargetSingle,
 			AreaType:    AreaChain,
@@ -354,15 +262,9 @@ func TestBaseTargetRule(t *testing.T) {
 			ChainFallof: 0.25,
 		})
 
-		if rule.AreaType() != AreaChain {
-			t.Errorf("expected AreaChain, got %v", rule.AreaType())
-		}
-		if rule.ChainCount() != 5 {
-			t.Errorf("expected chain count 5, got %d", rule.ChainCount())
-		}
-		if rule.ChainFalloff() != 0.25 {
-			t.Errorf("expected chain falloff 0.25, got %f", rule.ChainFalloff())
-		}
+		require.Equal(t, AreaChain, rule.AreaType())
+		require.Equal(t, 5, rule.ChainCount())
+		require.Equal(t, 0.25, rule.ChainFalloff())
 	})
 }
 
@@ -378,26 +280,14 @@ func TestBaseEffectDef(t *testing.T) {
 			Chance: 1.0,
 		})
 
-		if effect.ID() != "fire_damage" {
-			t.Errorf("expected ID 'fire_damage', got %q", effect.ID())
-		}
-		if effect.Type() != EffectDamage {
-			t.Errorf("expected EffectDamage, got %v", effect.Type())
-		}
-		if effect.DamageType() != "fire" {
-			t.Errorf("expected damage type 'fire', got %q", effect.DamageType())
-		}
-		if effect.Chance() != 1.0 {
-			t.Errorf("expected chance 1.0, got %f", effect.Chance())
-		}
+		require.Equal(t, "fire_damage", effect.ID())
+		require.Equal(t, EffectDamage, effect.Type())
+		require.Equal(t, "fire", effect.DamageType())
+		require.Equal(t, 1.0, effect.Chance())
 
 		scaling := effect.Scaling()
-		if len(scaling) != 1 {
-			t.Fatalf("expected 1 scaling rule, got %d", len(scaling))
-		}
-		if scaling[0].Attribute != "intelligence" {
-			t.Errorf("expected attribute 'intelligence', got %q", scaling[0].Attribute)
-		}
+		require.Len(t, scaling, 1)
+		require.Equal(t, "intelligence", scaling[0].Attribute)
 	})
 
 	t.Run("status effect", func(t *testing.T) {
@@ -409,172 +299,55 @@ func TestBaseEffectDef(t *testing.T) {
 			Duration: 5000,
 		})
 
-		if effect.Type() != EffectStatus {
-			t.Errorf("expected EffectStatus, got %v", effect.Type())
-		}
-		if effect.StatusID() != "burning" {
-			t.Errorf("expected status ID 'burning', got %q", effect.StatusID())
-		}
-		if effect.Chance() != 0.25 {
-			t.Errorf("expected chance 0.25, got %f", effect.Chance())
-		}
-		if effect.Duration() != 5000 {
-			t.Errorf("expected duration 5000, got %d", effect.Duration())
-		}
+		require.Equal(t, EffectStatus, effect.Type())
+		require.Equal(t, "burning", effect.StatusID())
+		require.Equal(t, 0.25, effect.Chance())
+		require.Equal(t, int64(5000), effect.Duration())
 	})
 }
 
 func TestTags(t *testing.T) {
-	t.Run("HasTag", func(t *testing.T) {
-		tags := []string{"fire", "spell", "aoe"}
+	t.Run("TagSet методы", func(t *testing.T) {
+		def := NewBaseDef(DefConfig{
+			ID:   "test",
+			Name: "Test",
+			Tags: []string{"fire", "spell", "damage"},
+		})
+		tags := def.Tags()
 
-		if !HasTag(tags, "fire") {
-			t.Error("expected to find 'fire' tag")
-		}
-		if HasTag(tags, "cold") {
-			t.Error("expected not to find 'cold' tag")
-		}
-	})
-
-	t.Run("HasAnyTag", func(t *testing.T) {
-		tags := []string{"fire", "spell"}
-
-		if !HasAnyTag(tags, []string{"cold", "fire"}) {
-			t.Error("expected to find at least one tag")
-		}
-		if HasAnyTag(tags, []string{"cold", "lightning"}) {
-			t.Error("expected not to find any tag")
-		}
-	})
-
-	t.Run("HasAllTags", func(t *testing.T) {
-		tags := []string{"fire", "spell", "damage"}
-
-		if !HasAllTags(tags, []string{"fire", "spell"}) {
-			t.Error("expected to find all tags")
-		}
-		if HasAllTags(tags, []string{"fire", "cold"}) {
-			t.Error("expected not to find all tags")
-		}
+		require.True(t, tags.Has("fire"))
+		require.False(t, tags.Has("cold"))
+		require.True(t, tags.ContainsAny("cold", "fire"))
+		require.False(t, tags.ContainsAny("cold", "lightning"))
+		require.True(t, tags.Contains("fire", "spell"))
+		require.False(t, tags.Contains("fire", "cold"))
 	})
 
 	t.Run("GetElementTags", func(t *testing.T) {
-		tags := []string{"fire", "spell", "cold", "damage"}
-		elements := GetElementTags(tags)
-
-		if len(elements) != 2 {
-			t.Errorf("expected 2 element tags, got %d", len(elements))
-		}
-	})
-}
-
-func TestLoadRealYAMLFiles(t *testing.T) {
-	registry := NewBaseRegistry()
-
-	// Load from data directory
-	err := registry.LoadFromDirectory("../../../data/skills")
-	if err != nil {
-		t.Fatalf("failed to load skills from directory: %v", err)
-	}
-
-	// Check we loaded expected skills
-	if registry.Count() == 0 {
-		t.Fatal("expected to load skills from YAML files")
-	}
-
-	t.Logf("Loaded %d skills from YAML files", registry.Count())
-
-	// Check specific skills exist
-	t.Run("active skills loaded", func(t *testing.T) {
-		fireball, ok := registry.Get("fireball")
-		if !ok {
-			t.Fatal("expected 'fireball' skill to be loaded")
-		}
-		if fireball.Type() != TypeActive {
-			t.Errorf("expected fireball to be active, got %v", fireball.Type())
-		}
-		if fireball.MaxLevel() != 5 {
-			t.Errorf("expected fireball max level 5, got %d", fireball.MaxLevel())
-		}
-		if !fireball.HasTag("fire") {
-			t.Error("expected fireball to have 'fire' tag")
-		}
-
-		// Check level data
-		level1 := fireball.LevelData(1)
-		if level1 == nil {
-			t.Fatal("expected fireball level 1 data")
-		}
-		costs := level1.ResourceCosts()
-		if len(costs) == 0 {
-			t.Error("expected fireball to have resource costs")
-		}
+		def := NewBaseDef(DefConfig{
+			ID:   "elemental",
+			Name: "Elemental",
+			Tags: []string{"fire", "spell", "cold", "damage"},
+		})
+		elements := GetElementTags(def.Tags())
+		require.Len(t, elements, 2)
 	})
 
-	t.Run("passive skills loaded", func(t *testing.T) {
-		toughness, ok := registry.Get("toughness")
-		if !ok {
-			t.Fatal("expected 'toughness' skill to be loaded")
-		}
-		if toughness.Type() != TypePassive {
-			t.Errorf("expected toughness to be passive, got %v", toughness.Type())
-		}
-	})
+	t.Run("IsDamageSkill", func(t *testing.T) {
+		damageSkill := NewBaseDef(DefConfig{
+			ID: "dmg", Name: "Damage", Tags: []string{"damage"},
+		})
+		healSkill := NewBaseDef(DefConfig{
+			ID: "heal", Name: "Heal", Tags: []string{"heal"},
+		})
 
-	t.Run("keystone passives loaded", func(t *testing.T) {
-		bloodMagic, ok := registry.Get("blood_magic")
-		if !ok {
-			t.Fatal("expected 'blood_magic' skill to be loaded")
-		}
-		if !bloodMagic.HasTag("keystone") {
-			t.Error("expected blood_magic to have 'keystone' tag")
-		}
-	})
-
-	t.Run("query by tag", func(t *testing.T) {
-		fireSkills := registry.GetByTag("fire")
-		if len(fireSkills) == 0 {
-			t.Error("expected to find fire skills")
-		}
-		t.Logf("Found %d fire skills", len(fireSkills))
-
-		keystones := registry.GetByTag("keystone")
-		if len(keystones) < 4 {
-			t.Errorf("expected at least 4 keystone skills, got %d", len(keystones))
-		}
-	})
-
-	t.Run("query by type", func(t *testing.T) {
-		activeSkills := registry.GetByType(TypeActive)
-		passiveSkills := registry.GetByType(TypePassive)
-
-		t.Logf("Active skills: %d, Passive skills: %d", len(activeSkills), len(passiveSkills))
-
-		if len(activeSkills) == 0 {
-			t.Error("expected to find active skills")
-		}
-		if len(passiveSkills) == 0 {
-			t.Error("expected to find passive skills")
-		}
-	})
-
-	t.Run("create instance from loaded skill", func(t *testing.T) {
-		inst, err := registry.CreateInstance("fireball", 3)
-		if err != nil {
-			t.Fatalf("failed to create instance: %v", err)
-		}
-
-		if inst.Level() != 3 {
-			t.Errorf("expected level 3, got %d", inst.Level())
-		}
-		if inst.DefID() != "fireball" {
-			t.Errorf("expected def ID 'fireball', got %q", inst.DefID())
-		}
+		require.True(t, IsDamageSkill(damageSkill.Tags()))
+		require.False(t, IsDamageSkill(healSkill.Tags()))
 	})
 }
 
 func TestRegistry(t *testing.T) {
-	t.Run("register and get", func(t *testing.T) {
+	t.Run("регистрация и получение", func(t *testing.T) {
 		registry := NewBaseRegistry()
 
 		def := NewBaseDef(DefConfig{
@@ -584,34 +357,24 @@ func TestRegistry(t *testing.T) {
 			Tags: []string{"fire"},
 		})
 
-		if err := registry.Register(def); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, registry.Register(def))
 
 		retrieved, ok := registry.Get("test_skill")
-		if !ok {
-			t.Fatal("expected to find skill")
-		}
-		if retrieved.ID() != "test_skill" {
-			t.Errorf("expected ID 'test_skill', got %q", retrieved.ID())
-		}
+		require.True(t, ok)
+		require.Equal(t, "test_skill", retrieved.ID())
 	})
 
-	t.Run("duplicate registration", func(t *testing.T) {
+	t.Run("повторная регистрация", func(t *testing.T) {
 		registry := NewBaseRegistry()
 
 		def := NewBaseDef(DefConfig{ID: "dup_skill", Name: "Dup Skill"})
-		if err := registry.Register(def); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, registry.Register(def))
 
 		def2 := NewBaseDef(DefConfig{ID: "dup_skill", Name: "Dup Skill 2"})
-		if err := registry.Register(def2); err == nil {
-			t.Error("expected error for duplicate registration")
-		}
+		require.Error(t, registry.Register(def2))
 	})
 
-	t.Run("get by tag", func(t *testing.T) {
+	t.Run("поиск по тегу", func(t *testing.T) {
 		registry := NewBaseRegistry()
 
 		registry.Register(NewBaseDef(DefConfig{
@@ -625,17 +388,13 @@ func TestRegistry(t *testing.T) {
 		}))
 
 		fireSkills := registry.GetByTag("fire")
-		if len(fireSkills) != 2 {
-			t.Errorf("expected 2 fire skills, got %d", len(fireSkills))
-		}
+		require.Len(t, fireSkills, 2)
 
 		spellSkills := registry.GetByTag("spell")
-		if len(spellSkills) != 1 {
-			t.Errorf("expected 1 spell skill, got %d", len(spellSkills))
-		}
+		require.Len(t, spellSkills, 1)
 	})
 
-	t.Run("get by type", func(t *testing.T) {
+	t.Run("поиск по типу", func(t *testing.T) {
 		registry := NewBaseRegistry()
 
 		registry.Register(NewBaseDef(DefConfig{
@@ -649,12 +408,10 @@ func TestRegistry(t *testing.T) {
 		}))
 
 		activeSkills := registry.GetByType(TypeActive)
-		if len(activeSkills) != 2 {
-			t.Errorf("expected 2 active skills, got %d", len(activeSkills))
-		}
+		require.Len(t, activeSkills, 2)
 	})
 
-	t.Run("create instance", func(t *testing.T) {
+	t.Run("создание экземпляра", func(t *testing.T) {
 		registry := NewBaseRegistry()
 
 		def := NewBaseDef(DefConfig{
@@ -665,18 +422,12 @@ func TestRegistry(t *testing.T) {
 		registry.Register(def)
 
 		inst, err := registry.CreateInstance("instanceable", 2)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if inst.Level() != 2 {
-			t.Errorf("expected level 2, got %d", inst.Level())
-		}
-		if inst.Def() == nil {
-			t.Error("expected def to be set")
-		}
+		require.NoError(t, err)
+		require.Equal(t, 2, inst.Level())
+		require.NotNil(t, inst.Def())
 	})
 
-	t.Run("load from YAML", func(t *testing.T) {
+	t.Run("загрузка из YAML", func(t *testing.T) {
 		registry := NewBaseRegistry()
 
 		yaml := `
@@ -718,57 +469,88 @@ skills:
         description: "Level 3"
 `
 
-		if err := registry.LoadFromYAML([]byte(yaml)); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, registry.LoadFromYAML([]byte(yaml)))
 
 		def, ok := registry.Get("yaml_skill")
-		if !ok {
-			t.Fatal("expected to find yaml_skill")
-		}
-
-		if def.Name() != "YAML Skill" {
-			t.Errorf("expected name 'YAML Skill', got %q", def.Name())
-		}
-		if def.Type() != TypeActive {
-			t.Errorf("expected TypeActive, got %v", def.Type())
-		}
-		if def.MaxLevel() != 3 {
-			t.Errorf("expected max level 3, got %d", def.MaxLevel())
-		}
-		if def.BaseCooldown() != 2000 {
-			t.Errorf("expected cooldown 2000, got %d", def.BaseCooldown())
-		}
-		if !def.HasTag("fire") {
-			t.Error("expected skill to have 'fire' tag")
-		}
+		require.True(t, ok)
+		require.Equal(t, "YAML Skill", def.Name())
+		require.Equal(t, TypeActive, def.Type())
+		require.Equal(t, 3, def.MaxLevel())
+		require.Equal(t, int64(2000), def.BaseCooldown())
+		require.True(t, def.Tags().Has("fire"))
 
 		targeting := def.Targeting()
-		if targeting.Type() != TargetSingle {
-			t.Errorf("expected TargetSingle, got %v", targeting.Type())
-		}
-		if targeting.Range() != 20 {
-			t.Errorf("expected range 20, got %f", targeting.Range())
-		}
+		require.Equal(t, TargetSingle, targeting.Type())
+		require.Equal(t, float64(20), targeting.Range())
 
 		effects := def.Effects()
-		if len(effects) != 1 {
-			t.Fatalf("expected 1 effect, got %d", len(effects))
-		}
-		if effects[0].Type() != EffectDamage {
-			t.Errorf("expected EffectDamage, got %v", effects[0].Type())
-		}
+		require.Len(t, effects, 1)
+		require.Equal(t, EffectDamage, effects[0].Type())
 
 		level1 := def.LevelData(1)
-		if level1 == nil {
-			t.Fatal("expected level 1 data")
-		}
+		require.NotNil(t, level1)
 		costs := level1.ResourceCosts()
-		if len(costs) != 1 {
-			t.Fatalf("expected 1 cost, got %d", len(costs))
-		}
-		if costs[0].Amount != 10 {
-			t.Errorf("expected cost 10, got %f", costs[0].Amount)
-		}
+		require.Len(t, costs, 1)
+		require.Equal(t, float64(10), costs[0].Amount)
+	})
+}
+
+func TestLoadRealYAMLFiles(t *testing.T) {
+	registry := NewBaseRegistry()
+
+	err := registry.LoadFromDirectory("../../../data/skills")
+	require.NoError(t, err, "failed to load skills from directory")
+	require.Greater(t, registry.Count(), 0, "expected to load skills from YAML files")
+
+	t.Logf("Loaded %d skills from YAML files", registry.Count())
+
+	t.Run("active skills", func(t *testing.T) {
+		fireball, ok := registry.Get("fireball")
+		require.True(t, ok, "expected 'fireball' skill to be loaded")
+		require.Equal(t, TypeActive, fireball.Type())
+		require.Equal(t, 5, fireball.MaxLevel())
+		require.True(t, fireball.Tags().Has("fire"))
+
+		level1 := fireball.LevelData(1)
+		require.NotNil(t, level1)
+		require.NotEmpty(t, level1.ResourceCosts())
+	})
+
+	t.Run("passive skills", func(t *testing.T) {
+		toughness, ok := registry.Get("toughness")
+		require.True(t, ok, "expected 'toughness' skill to be loaded")
+		require.Equal(t, TypePassive, toughness.Type())
+	})
+
+	t.Run("keystone passives", func(t *testing.T) {
+		bloodMagic, ok := registry.Get("blood_magic")
+		require.True(t, ok, "expected 'blood_magic' skill to be loaded")
+		require.True(t, bloodMagic.Tags().Has("keystone"))
+	})
+
+	t.Run("поиск по тегу", func(t *testing.T) {
+		fireSkills := registry.GetByTag("fire")
+		require.NotEmpty(t, fireSkills)
+		t.Logf("Found %d fire skills", len(fireSkills))
+
+		keystones := registry.GetByTag("keystone")
+		require.GreaterOrEqual(t, len(keystones), 4)
+	})
+
+	t.Run("поиск по типу", func(t *testing.T) {
+		activeSkills := registry.GetByType(TypeActive)
+		passiveSkills := registry.GetByType(TypePassive)
+
+		t.Logf("Active skills: %d, Passive skills: %d", len(activeSkills), len(passiveSkills))
+
+		require.NotEmpty(t, activeSkills)
+		require.NotEmpty(t, passiveSkills)
+	})
+
+	t.Run("создание экземпляра из загруженного", func(t *testing.T) {
+		inst, err := registry.CreateInstance("fireball", 3)
+		require.NoError(t, err)
+		require.Equal(t, 3, inst.Level())
+		require.Equal(t, "fireball", inst.DefID())
 	})
 }

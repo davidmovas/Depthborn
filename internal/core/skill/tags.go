@@ -1,5 +1,7 @@
 package skill
 
+import "github.com/davidmovas/Depthborn/internal/core/types"
+
 // =============================================================================
 // SKILL TAGS
 // =============================================================================
@@ -72,57 +74,28 @@ const (
 // TAG UTILITIES
 // =============================================================================
 
-// HasTag checks if tag list contains specific tag
-func HasTag(tags []string, tag string) bool {
-	for _, t := range tags {
-		if t == tag {
-			return true
-		}
-	}
-	return false
+// ElementTags is the list of all element tags
+var ElementTags = []string{
+	TagFire, TagCold, TagLightning, TagPoison,
+	TagPhysical, TagChaos, TagHoly, TagShadow, TagArcane,
 }
 
-// HasAnyTag checks if tag list contains any of the specified tags
-func HasAnyTag(tags []string, check []string) bool {
-	for _, c := range check {
-		if HasTag(tags, c) {
-			return true
-		}
-	}
-	return false
-}
-
-// HasAllTags checks if tag list contains all specified tags
-func HasAllTags(tags []string, check []string) bool {
-	for _, c := range check {
-		if !HasTag(tags, c) {
-			return false
-		}
-	}
-	return true
-}
-
-// FilterByTag returns tags that match a specific tag
+// FilterByTag returns skills that have specific tag
 func FilterByTag(skills []Def, tag string) []Def {
 	var result []Def
 	for _, s := range skills {
-		if s.HasTag(tag) {
+		if s.Tags().Has(tag) {
 			result = append(result, s)
 		}
 	}
 	return result
 }
 
-// GetElementTags returns all element-related tags from list
-func GetElementTags(tags []string) []string {
-	elements := []string{
-		TagFire, TagCold, TagLightning, TagPoison,
-		TagPhysical, TagChaos, TagHoly, TagShadow, TagArcane,
-	}
-
+// GetElementTags returns all element-related tags from TagSet
+func GetElementTags(tags types.TagSet) []string {
 	var result []string
-	for _, e := range elements {
-		if HasTag(tags, e) {
+	for _, e := range ElementTags {
+		if tags.Has(e) {
 			result = append(result, e)
 		}
 	}
@@ -130,16 +103,16 @@ func GetElementTags(tags []string) []string {
 }
 
 // IsDamageSkill checks if skill has damage-related tags
-func IsDamageSkill(tags []string) bool {
-	return HasTag(tags, TagDamage) || HasTag(tags, TagAttack)
+func IsDamageSkill(tags types.TagSet) bool {
+	return tags.Has(TagDamage) || tags.Has(TagAttack)
 }
 
 // IsDefenseSkill checks if skill has defense-related tags
-func IsDefenseSkill(tags []string) bool {
-	return HasTag(tags, TagDefense) || HasTag(tags, TagBuff)
+func IsDefenseSkill(tags types.TagSet) bool {
+	return tags.Has(TagDefense) || tags.Has(TagBuff)
 }
 
 // IsSupportSkill checks if skill has support-related tags
-func IsSupportSkill(tags []string) bool {
-	return HasTag(tags, TagSupport) || HasTag(tags, TagHeal) || HasTag(tags, TagBuff)
+func IsSupportSkill(tags types.TagSet) bool {
+	return tags.Has(TagSupport) || tags.Has(TagHeal) || tags.Has(TagBuff)
 }

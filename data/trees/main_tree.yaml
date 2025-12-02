@@ -1,0 +1,1094 @@
+version: "1.0"
+
+tree:
+  id: main_tree
+  name: "Skill Tree"
+  description: "Main passive skill tree for character progression"
+
+  # =============================================================================
+  # RESPEC CONFIGURATION
+  # =============================================================================
+  respec_config:
+    base_cost_per_node: 100      # Gold per node to respec
+    cost_per_node_level: 50      # Additional gold per level
+    reset_cost_base: 1000        # Base gold for full reset
+
+  # =============================================================================
+  # BRANCHES - Thematic groupings
+  # =============================================================================
+  branches:
+    - id: combat
+      name: "Combat"
+      description: "Offensive capabilities and damage"
+      color: "#ff4444"
+      icon: "branch_combat"
+
+    - id: defense
+      name: "Defense"
+      description: "Survivability and damage mitigation"
+      color: "#44aa44"
+      icon: "branch_defense"
+
+    - id: magic
+      name: "Magic"
+      description: "Spell power and elemental mastery"
+      color: "#4444ff"
+      icon: "branch_magic"
+
+    - id: crafting
+      name: "Crafting"
+      description: "Item creation and modification"
+      color: "#ffaa00"
+      icon: "branch_crafting"
+
+    - id: trading
+      name: "Trading"
+      description: "Economy and merchant skills"
+      color: "#ffdd00"
+      icon: "branch_trading"
+
+  # =============================================================================
+  # START NODES - Entry points into the tree
+  # =============================================================================
+  start_nodes:
+    - start_combat
+    - start_defense
+    - start_magic
+
+  # =============================================================================
+  # NODES
+  # =============================================================================
+  nodes:
+    # =========================================================================
+    # COMBAT BRANCH - Start
+    # =========================================================================
+    - id: start_combat
+      name: "Way of the Warrior"
+      description: "Begin your journey as a warrior"
+      type: path
+      branch: combat
+      cost: 0  # Free start node
+      position: { x: 0, y: 0 }
+      connections: [str_1, dex_1]
+      effects:
+        - type: attribute
+          attribute: strength
+          mod_type: flat
+          value: 1
+          description: "+1 Strength"
+
+    # Basic strength nodes
+    - id: str_1
+      name: "Brute Force"
+      description: "+2 Strength"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 1, y: -0.5 }
+      requirements: [start_combat]
+      connections: [str_2, melee_damage_1]
+      effects:
+        - type: attribute
+          attribute: strength
+          mod_type: flat
+          value: 2
+
+    - id: str_2
+      name: "Raw Power"
+      description: "+3 Strength"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 2, y: -0.5 }
+      requirements: [str_1]
+      connections: [str_notable, crit_1]
+      effects:
+        - type: attribute
+          attribute: strength
+          mod_type: flat
+          value: 3
+
+    # Notable: Berserker Rage
+    - id: str_notable
+      name: "Berserker Rage"
+      description: "+10 Strength, +5% Attack Speed"
+      type: notable
+      branch: combat
+      cost: 2
+      position: { x: 3, y: -1 }
+      requirements: [str_2]
+      connections: [blood_magic_path]
+      effects:
+        - type: attribute
+          attribute: strength
+          mod_type: flat
+          value: 10
+        - type: attribute
+          attribute: attack_speed
+          mod_type: increased
+          value: 5
+
+    # Basic dexterity nodes
+    - id: dex_1
+      name: "Quick Hands"
+      description: "+2 Dexterity"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 1, y: 0.5 }
+      requirements: [start_combat]
+      connections: [dex_2, attack_speed_1]
+      effects:
+        - type: attribute
+          attribute: dexterity
+          mod_type: flat
+          value: 2
+
+    - id: dex_2
+      name: "Nimble Fingers"
+      description: "+3 Dexterity"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 2, y: 0.5 }
+      requirements: [dex_1]
+      connections: [dex_notable, evasion_1]
+      effects:
+        - type: attribute
+          attribute: dexterity
+          mod_type: flat
+          value: 3
+
+    # Notable: Deadly Precision
+    - id: dex_notable
+      name: "Deadly Precision"
+      description: "+10 Dexterity, +3% Critical Chance"
+      type: notable
+      branch: combat
+      cost: 2
+      position: { x: 3, y: 1 }
+      requirements: [dex_2]
+      connections: [glass_cannon_path]
+      effects:
+        - type: attribute
+          attribute: dexterity
+          mod_type: flat
+          value: 10
+        - type: attribute
+          attribute: crit_chance
+          mod_type: flat
+          value: 3
+
+    # Melee damage path
+    - id: melee_damage_1
+      name: "Melee Training"
+      description: "+5% Melee Damage"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 1.5, y: -1.5 }
+      requirements: [str_1]
+      connections: [melee_damage_2]
+      effects:
+        - type: skill_mod
+          target_skill_tags: [melee]
+          description: "+5% Melee Damage"
+          metadata:
+            damage_increase: 0.05
+
+    - id: melee_damage_2
+      name: "Brutal Strikes"
+      description: "+10% Melee Damage"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 2.5, y: -1.5 }
+      requirements: [melee_damage_1]
+      connections: [melee_notable]
+      effects:
+        - type: skill_mod
+          target_skill_tags: [melee]
+          description: "+10% Melee Damage"
+          metadata:
+            damage_increase: 0.10
+
+    # Notable: Executioner
+    - id: melee_notable
+      name: "Executioner"
+      description: "Melee attacks deal 20% more damage to enemies below 30% health"
+      type: notable
+      branch: combat
+      cost: 2
+      position: { x: 3.5, y: -1.5 }
+      requirements: [melee_damage_2]
+      connections: []
+      effects:
+        - type: passive
+          trigger_type: on_hit
+          description: "20% more damage to low health enemies"
+          metadata:
+            target_health_threshold: 0.30
+            damage_multiplier: 1.20
+            skill_tags: [melee]
+
+    # Critical path
+    - id: crit_1
+      name: "Keen Eye"
+      description: "+10% Critical Multiplier"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 3, y: 0 }
+      requirements: [str_2, dex_2]  # Can reach from either
+      connections: [crit_2]
+      effects:
+        - type: attribute
+          attribute: crit_multiplier
+          mod_type: flat
+          value: 10
+
+    - id: crit_2
+      name: "Lethal Strikes"
+      description: "+2% Critical Chance, +15% Critical Multiplier"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 4, y: 0 }
+      requirements: [crit_1]
+      connections: [crit_notable]
+      effects:
+        - type: attribute
+          attribute: crit_chance
+          mod_type: flat
+          value: 2
+        - type: attribute
+          attribute: crit_multiplier
+          mod_type: flat
+          value: 15
+
+    # Notable: Critical Mastery
+    - id: crit_notable
+      name: "Critical Mastery"
+      description: "+5% Critical Chance, +30% Critical Multiplier"
+      type: notable
+      branch: combat
+      cost: 3
+      position: { x: 5, y: 0 }
+      requirements: [crit_2]
+      connections: []
+      effects:
+        - type: attribute
+          attribute: crit_chance
+          mod_type: flat
+          value: 5
+        - type: attribute
+          attribute: crit_multiplier
+          mod_type: flat
+          value: 30
+
+    # Attack speed path
+    - id: attack_speed_1
+      name: "Swift Strikes"
+      description: "+3% Attack Speed"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 1.5, y: 1.5 }
+      requirements: [dex_1]
+      connections: [attack_speed_2]
+      effects:
+        - type: attribute
+          attribute: attack_speed
+          mod_type: increased
+          value: 3
+
+    - id: attack_speed_2
+      name: "Rapid Assault"
+      description: "+5% Attack Speed"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 2.5, y: 1.5 }
+      requirements: [attack_speed_1]
+      connections: [attack_speed_notable]
+      effects:
+        - type: attribute
+          attribute: attack_speed
+          mod_type: increased
+          value: 5
+
+    # Notable: Frenzy
+    - id: attack_speed_notable
+      name: "Frenzy"
+      description: "+15% Attack Speed. 10% chance on kill to gain 20% more attack speed for 4 seconds"
+      type: notable
+      branch: combat
+      cost: 2
+      position: { x: 3.5, y: 1.5 }
+      requirements: [attack_speed_2]
+      connections: []
+      effects:
+        - type: attribute
+          attribute: attack_speed
+          mod_type: increased
+          value: 15
+        - type: passive
+          trigger_type: on_kill
+          trigger_value: 0.10
+          description: "10% chance for Frenzy buff"
+          metadata:
+            buff_id: frenzy_buff
+            attack_speed_more: 0.20
+            duration_ms: 4000
+
+    # =========================================================================
+    # KEYSTONE: Blood Magic
+    # =========================================================================
+    - id: blood_magic_path
+      name: "Path to Blood Magic"
+      description: "+5% Maximum Health"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 4, y: -2 }
+      requirements: [str_notable]
+      connections: [blood_magic]
+      effects:
+        - type: attribute
+          attribute: max_health
+          mod_type: increased
+          value: 5
+
+    - id: blood_magic
+      name: "Blood Magic"
+      description: "Skills cost Health instead of Mana. +30% Maximum Health."
+      type: keystone
+      branch: combat
+      cost: 1
+      icon: "keystone_blood"
+      position: { x: 5, y: -2 }
+      requirements: [blood_magic_path]
+      exclusions: [glass_cannon]  # Cannot take both keystones
+      skill_id: blood_magic       # Links to passive skill definition
+      effects:
+        - type: attribute
+          attribute: max_health
+          mod_type: increased
+          value: 30
+          description: "+30% Maximum Health"
+        - type: special
+          description: "Skills cost Health instead of Mana"
+          metadata:
+            convert_resource_from: mana
+            convert_resource_to: health
+
+    # =========================================================================
+    # KEYSTONE: Glass Cannon
+    # =========================================================================
+    - id: glass_cannon_path
+      name: "Path to Glass Cannon"
+      description: "+10% Damage"
+      type: path
+      branch: combat
+      cost: 1
+      position: { x: 4, y: 2 }
+      requirements: [dex_notable]
+      connections: [glass_cannon]
+      effects:
+        - type: skill_mod
+          description: "+10% Damage"
+          metadata:
+            damage_increase: 0.10
+
+    - id: glass_cannon
+      name: "Glass Cannon"
+      description: "+50% Damage dealt. +25% Damage taken."
+      type: keystone
+      branch: combat
+      cost: 1
+      icon: "keystone_glass"
+      position: { x: 5, y: 2 }
+      requirements: [glass_cannon_path]
+      exclusions: [blood_magic]  # Mutual exclusion
+      skill_id: glass_cannon
+      effects:
+        - type: special
+          description: "+50% Damage dealt, +25% Damage taken"
+          metadata:
+            damage_dealt_more: 0.50
+            damage_taken_more: 0.25
+
+    # =========================================================================
+    # DEFENSE BRANCH - Start
+    # =========================================================================
+    - id: start_defense
+      name: "Way of the Guardian"
+      description: "Begin your journey as a guardian"
+      type: path
+      branch: defense
+      cost: 0
+      position: { x: 0, y: 5 }
+      connections: [vit_1, armor_1]
+      effects:
+        - type: attribute
+          attribute: vitality
+          mod_type: flat
+          value: 1
+
+    # Vitality path
+    - id: vit_1
+      name: "Toughness"
+      description: "+10 Maximum Health"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 1, y: 4.5 }
+      requirements: [start_defense]
+      connections: [vit_2]
+      effects:
+        - type: attribute
+          attribute: max_health
+          mod_type: flat
+          value: 10
+
+    - id: vit_2
+      name: "Constitution"
+      description: "+20 Maximum Health"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 2, y: 4.5 }
+      requirements: [vit_1]
+      connections: [vit_notable]
+      effects:
+        - type: attribute
+          attribute: max_health
+          mod_type: flat
+          value: 20
+
+    # Notable: Unbreakable
+    - id: vit_notable
+      name: "Unbreakable"
+      description: "+50 Maximum Health, +5% Life Regeneration"
+      type: notable
+      branch: defense
+      cost: 2
+      position: { x: 3, y: 4.5 }
+      requirements: [vit_2]
+      connections: [unwavering_path]
+      effects:
+        - type: attribute
+          attribute: max_health
+          mod_type: flat
+          value: 50
+        - type: attribute
+          attribute: life_regen
+          mod_type: increased
+          value: 5
+
+    # Armor path
+    - id: armor_1
+      name: "Thick Skin"
+      description: "+10% Armor"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 1, y: 5.5 }
+      requirements: [start_defense]
+      connections: [armor_2]
+      effects:
+        - type: attribute
+          attribute: armor
+          mod_type: increased
+          value: 10
+
+    - id: armor_2
+      name: "Iron Will"
+      description: "+15% Armor"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 2, y: 5.5 }
+      requirements: [armor_1]
+      connections: [armor_notable]
+      effects:
+        - type: attribute
+          attribute: armor
+          mod_type: increased
+          value: 15
+
+    # Notable: Iron Skin
+    - id: armor_notable
+      name: "Iron Skin"
+      description: "+30% Armor from Equipment"
+      type: notable
+      branch: defense
+      cost: 2
+      position: { x: 3, y: 5.5 }
+      requirements: [armor_2]
+      connections: []
+      effects:
+        - type: attribute
+          attribute: armor
+          mod_type: increased
+          value: 30
+
+    # Evasion path (connects from combat)
+    - id: evasion_1
+      name: "Reflexes"
+      description: "+10% Evasion"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 2, y: 3 }
+      requirements: [dex_2]
+      connections: [evasion_2]
+      effects:
+        - type: attribute
+          attribute: evasion
+          mod_type: increased
+          value: 10
+
+    - id: evasion_2
+      name: "Wind Dancer"
+      description: "+15% Evasion, +3% Movement Speed"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 3, y: 3 }
+      requirements: [evasion_1]
+      connections: [evasion_notable]
+      effects:
+        - type: attribute
+          attribute: evasion
+          mod_type: increased
+          value: 15
+        - type: attribute
+          attribute: movement_speed
+          mod_type: increased
+          value: 3
+
+    # Notable: Phase
+    - id: evasion_notable
+      name: "Phase"
+      description: "+25% Evasion. 10% chance to avoid all damage from a hit."
+      type: notable
+      branch: defense
+      cost: 2
+      position: { x: 4, y: 3 }
+      requirements: [evasion_2]
+      connections: []
+      effects:
+        - type: attribute
+          attribute: evasion
+          mod_type: increased
+          value: 25
+        - type: passive
+          trigger_type: on_damaged
+          trigger_value: 0.10
+          description: "10% chance to avoid damage"
+          metadata:
+            avoid_damage: true
+
+    # =========================================================================
+    # KEYSTONE: Unwavering Stance
+    # =========================================================================
+    - id: unwavering_path
+      name: "Path to Unwavering"
+      description: "+20 Maximum Health"
+      type: path
+      branch: defense
+      cost: 1
+      position: { x: 4, y: 4.5 }
+      requirements: [vit_notable]
+      connections: [unwavering_stance]
+      effects:
+        - type: attribute
+          attribute: max_health
+          mod_type: flat
+          value: 20
+
+    - id: unwavering_stance
+      name: "Unwavering Stance"
+      description: "Cannot Evade. Cannot be Stunned."
+      type: keystone
+      branch: defense
+      cost: 1
+      icon: "keystone_unwavering"
+      position: { x: 5, y: 4.5 }
+      requirements: [unwavering_path]
+      exclusions: [evasion_notable]  # Anti-synergy
+      skill_id: unwavering_stance
+      effects:
+        - type: attribute
+          attribute: evasion
+          mod_type: override
+          value: 0
+          description: "Cannot Evade"
+        - type: special
+          description: "Cannot be Stunned"
+          metadata:
+            immunity: stun
+
+    # =========================================================================
+    # MAGIC BRANCH - Start
+    # =========================================================================
+    - id: start_magic
+      name: "Way of the Mage"
+      description: "Begin your journey as a mage"
+      type: path
+      branch: magic
+      cost: 0
+      position: { x: 0, y: -5 }
+      connections: [int_1, mana_1]
+      effects:
+        - type: attribute
+          attribute: intelligence
+          mod_type: flat
+          value: 1
+
+    # Intelligence path
+    - id: int_1
+      name: "Sharp Mind"
+      description: "+2 Intelligence"
+      type: path
+      branch: magic
+      cost: 1
+      position: { x: 1, y: -5.5 }
+      requirements: [start_magic]
+      connections: [int_2, spell_damage_1]
+      effects:
+        - type: attribute
+          attribute: intelligence
+          mod_type: flat
+          value: 2
+
+    - id: int_2
+      name: "Brilliant Mind"
+      description: "+3 Intelligence"
+      type: path
+      branch: magic
+      cost: 1
+      position: { x: 2, y: -5.5 }
+      requirements: [int_1]
+      connections: [int_notable]
+      effects:
+        - type: attribute
+          attribute: intelligence
+          mod_type: flat
+          value: 3
+
+    # Notable: Arcane Savant
+    - id: int_notable
+      name: "Arcane Savant"
+      description: "+10 Intelligence, +10% Spell Damage"
+      type: notable
+      branch: magic
+      cost: 2
+      position: { x: 3, y: -5.5 }
+      requirements: [int_2]
+      connections: [elemental_eq_path]
+      effects:
+        - type: attribute
+          attribute: intelligence
+          mod_type: flat
+          value: 10
+        - type: skill_mod
+          target_skill_tags: [spell]
+          description: "+10% Spell Damage"
+          metadata:
+            damage_increase: 0.10
+
+    # Mana path
+    - id: mana_1
+      name: "Mana Flow"
+      description: "+20 Maximum Mana"
+      type: path
+      branch: magic
+      cost: 1
+      position: { x: 1, y: -4.5 }
+      requirements: [start_magic]
+      connections: [mana_2]
+      effects:
+        - type: attribute
+          attribute: max_mana
+          mod_type: flat
+          value: 20
+
+    - id: mana_2
+      name: "Deep Reserves"
+      description: "+30 Maximum Mana, +5% Mana Regeneration"
+      type: path
+      branch: magic
+      cost: 1
+      position: { x: 2, y: -4.5 }
+      requirements: [mana_1]
+      connections: [mana_notable]
+      effects:
+        - type: attribute
+          attribute: max_mana
+          mod_type: flat
+          value: 30
+        - type: attribute
+          attribute: mana_regen
+          mod_type: increased
+          value: 5
+
+    # Notable: Arcane Battery
+    - id: mana_notable
+      name: "Arcane Battery"
+      description: "+50 Maximum Mana, +15% Mana Regeneration"
+      type: notable
+      branch: magic
+      cost: 2
+      position: { x: 3, y: -4.5 }
+      requirements: [mana_2]
+      connections: []
+      effects:
+        - type: attribute
+          attribute: max_mana
+          mod_type: flat
+          value: 50
+        - type: attribute
+          attribute: mana_regen
+          mod_type: increased
+          value: 15
+
+    # Spell damage path
+    - id: spell_damage_1
+      name: "Arcane Power"
+      description: "+8% Spell Damage"
+      type: path
+      branch: magic
+      cost: 1
+      position: { x: 1.5, y: -6.5 }
+      requirements: [int_1]
+      connections: [fire_mastery, cold_mastery, lightning_mastery]
+      effects:
+        - type: skill_mod
+          target_skill_tags: [spell]
+          metadata:
+            damage_increase: 0.08
+
+    # Elemental masteries (leveled nodes)
+    - id: fire_mastery
+      name: "Fire Mastery"
+      description: "Increases fire damage"
+      type: notable
+      branch: magic
+      cost: 1
+      max_level: 3
+      level_cost: 1
+      position: { x: 2.5, y: -7 }
+      requirements: [spell_damage_1]
+      connections: []
+      skill_id: fire_mastery
+      levels:
+        - level: 1
+          effects:
+            - type: skill_mod
+              target_skill_tags: [fire]
+              description: "+10% Fire Damage"
+              metadata:
+                damage_increase: 0.10
+        - level: 2
+          effects:
+            - type: skill_mod
+              target_skill_tags: [fire]
+              description: "+20% Fire Damage"
+              metadata:
+                damage_increase: 0.20
+        - level: 3
+          effects:
+            - type: skill_mod
+              target_skill_tags: [fire]
+              description: "+35% Fire Damage"
+              metadata:
+                damage_increase: 0.35
+
+    - id: cold_mastery
+      name: "Cold Mastery"
+      description: "Increases cold damage"
+      type: notable
+      branch: magic
+      cost: 1
+      max_level: 3
+      level_cost: 1
+      position: { x: 2.5, y: -6.5 }
+      requirements: [spell_damage_1]
+      connections: []
+      skill_id: cold_mastery
+      levels:
+        - level: 1
+          effects:
+            - type: skill_mod
+              target_skill_tags: [cold]
+              description: "+10% Cold Damage"
+              metadata:
+                damage_increase: 0.10
+        - level: 2
+          effects:
+            - type: skill_mod
+              target_skill_tags: [cold]
+              description: "+20% Cold Damage"
+              metadata:
+                damage_increase: 0.20
+        - level: 3
+          effects:
+            - type: skill_mod
+              target_skill_tags: [cold]
+              description: "+35% Cold Damage"
+              metadata:
+                damage_increase: 0.35
+
+    - id: lightning_mastery
+      name: "Lightning Mastery"
+      description: "Increases lightning damage"
+      type: notable
+      branch: magic
+      cost: 1
+      max_level: 3
+      level_cost: 1
+      position: { x: 2.5, y: -6 }
+      requirements: [spell_damage_1]
+      connections: []
+      skill_id: lightning_mastery
+      levels:
+        - level: 1
+          effects:
+            - type: skill_mod
+              target_skill_tags: [lightning]
+              description: "+10% Lightning Damage"
+              metadata:
+                damage_increase: 0.10
+        - level: 2
+          effects:
+            - type: skill_mod
+              target_skill_tags: [lightning]
+              description: "+20% Lightning Damage"
+              metadata:
+                damage_increase: 0.20
+        - level: 3
+          effects:
+            - type: skill_mod
+              target_skill_tags: [lightning]
+              description: "+35% Lightning Damage"
+              metadata:
+                damage_increase: 0.35
+
+    # =========================================================================
+    # KEYSTONE: Elemental Equilibrium
+    # =========================================================================
+    - id: elemental_eq_path
+      name: "Path to Equilibrium"
+      description: "+5% Elemental Damage"
+      type: path
+      branch: magic
+      cost: 1
+      position: { x: 4, y: -5.5 }
+      requirements: [int_notable]
+      connections: [elemental_equilibrium]
+      effects:
+        - type: skill_mod
+          target_skill_tags: [fire, cold, lightning]
+          metadata:
+            damage_increase: 0.05
+
+    - id: elemental_equilibrium
+      name: "Elemental Equilibrium"
+      description: "Hitting an enemy with an element gives them -25% resistance to other elements, but +40% to that element for 5 seconds."
+      type: keystone
+      branch: magic
+      cost: 1
+      icon: "keystone_equilibrium"
+      position: { x: 5, y: -5.5 }
+      requirements: [elemental_eq_path]
+      exclusions: []
+      skill_id: elemental_equilibrium
+      effects:
+        - type: passive
+          trigger_type: on_hit
+          description: "Apply Elemental Equilibrium debuff"
+          metadata:
+            skill_tags: [fire, cold, lightning]
+            debuff_other_resist: -25
+            buff_same_resist: 40
+            duration_ms: 5000
+
+    # =========================================================================
+    # CRAFTING BRANCH (Connected from other branches)
+    # =========================================================================
+    - id: craft_entry
+      name: "Artisan's Touch"
+      description: "+5% Crafting Quality"
+      type: path
+      branch: crafting
+      cost: 1
+      position: { x: -2, y: 2 }
+      requirements: [start_defense, start_combat]  # Accessible from multiple starts
+      connections: [craft_1, craft_2]
+      effects:
+        - type: special
+          description: "+5% Crafting Quality"
+          metadata:
+            crafting_quality_bonus: 0.05
+
+    - id: craft_1
+      name: "Weapon Smith"
+      description: "Unlocks weapon crafting recipes"
+      type: skill
+      branch: crafting
+      cost: 2
+      position: { x: -3, y: 1.5 }
+      requirements: [craft_entry]
+      connections: [master_crafter]
+      effects:
+        - type: unlock_craft
+          description: "Unlock weapon crafting"
+          metadata:
+            recipes: [basic_sword, basic_axe, basic_mace]
+
+    - id: craft_2
+      name: "Armor Smith"
+      description: "Unlocks armor crafting recipes"
+      type: skill
+      branch: crafting
+      cost: 2
+      position: { x: -3, y: 2.5 }
+      requirements: [craft_entry]
+      connections: [master_crafter]
+      effects:
+        - type: unlock_craft
+          description: "Unlock armor crafting"
+          metadata:
+            recipes: [basic_helmet, basic_chest, basic_gloves]
+
+    # Notable: Master Crafter (leveled)
+    - id: master_crafter
+      name: "Master Crafter"
+      description: "Increased chance for bonus crafting outcomes"
+      type: notable
+      branch: crafting
+      cost: 2
+      max_level: 3
+      level_cost: 1
+      position: { x: -4, y: 2 }
+      requirements: [craft_1, craft_2]
+      connections: []
+      skill_id: master_crafter
+      levels:
+        - level: 1
+          effects:
+            - type: special
+              description: "+10% Bonus Craft Chance"
+              metadata:
+                bonus_chance: 0.10
+        - level: 2
+          effects:
+            - type: special
+              description: "+20% Bonus Craft Chance"
+              metadata:
+                bonus_chance: 0.20
+        - level: 3
+          effects:
+            - type: special
+              description: "+35% Bonus Craft Chance"
+              metadata:
+                bonus_chance: 0.35
+
+    # =========================================================================
+    # TRADING BRANCH
+    # =========================================================================
+    - id: trade_entry
+      name: "Merchant's Eye"
+      description: "Items sell for 5% more gold"
+      type: path
+      branch: trading
+      cost: 1
+      position: { x: -2, y: -2 }
+      requirements: [start_magic, start_combat]
+      connections: [bargain_hunter]
+      effects:
+        - type: trade
+          description: "+5% Sell Value"
+          metadata:
+            sell_value_bonus: 0.05
+
+    # Notable: Bargain Hunter (leveled)
+    - id: bargain_hunter
+      name: "Bargain Hunter"
+      description: "Reduces purchase costs"
+      type: notable
+      branch: trading
+      cost: 1
+      max_level: 5
+      level_cost: 1
+      position: { x: -3, y: -2 }
+      requirements: [trade_entry]
+      connections: [lucky_find]
+      skill_id: bargain_hunter
+      levels:
+        - level: 1
+          effects:
+            - type: trade
+              description: "50 gold discount"
+              metadata:
+                flat_discount: 50
+        - level: 2
+          effects:
+            - type: trade
+              description: "100 gold discount"
+              metadata:
+                flat_discount: 100
+        - level: 3
+          effects:
+            - type: trade
+              description: "175 gold discount"
+              metadata:
+                flat_discount: 175
+        - level: 4
+          effects:
+            - type: trade
+              description: "275 gold discount"
+              metadata:
+                flat_discount: 275
+        - level: 5
+          effects:
+            - type: trade
+              description: "400 gold discount"
+              metadata:
+                flat_discount: 400
+
+    # Notable: Lucky Find
+    - id: lucky_find
+      name: "Lucky Find"
+      description: "+5% Item Quantity from drops"
+      type: notable
+      branch: trading
+      cost: 2
+      position: { x: -4, y: -2 }
+      requirements: [bargain_hunter]
+      connections: [treasure_hunter]
+      skill_id: lucky_find
+      effects:
+        - type: attribute
+          attribute: loot_quantity
+          mod_type: increased
+          value: 5
+
+    # Notable: Treasure Hunter
+    - id: treasure_hunter
+      name: "Treasure Hunter"
+      description: "+15% Item Rarity from drops"
+      type: notable
+      branch: trading
+      cost: 2
+      position: { x: -5, y: -2 }
+      requirements: [lucky_find]
+      connections: []
+      skill_id: treasure_hunter
+      effects:
+        - type: attribute
+          attribute: loot_rarity
+          mod_type: increased
+          value: 15

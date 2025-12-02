@@ -2,6 +2,8 @@ package skill
 
 import (
 	"context"
+
+	"github.com/davidmovas/Depthborn/internal/core/types"
 )
 
 // =============================================================================
@@ -39,10 +41,7 @@ type Def interface {
 	Type() Type
 
 	// Tags returns skill tags for filtering and modification
-	Tags() []string
-
-	// HasTag checks if skill has specific tag
-	HasTag(tag string) bool
+	Tags() types.TagSet
 
 	// MaxLevel returns maximum skill level (0 = no levels)
 	MaxLevel() int
@@ -485,6 +484,6 @@ type Skill interface {
 	MaxCooldown() int64
 	SetCooldown(ms int64)
 	ManaCost() float64
-	Tags() []string
+	Tags() types.TagSet
 	Metadata() map[string]any
 }

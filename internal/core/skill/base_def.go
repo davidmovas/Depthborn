@@ -3,6 +3,8 @@ package skill
 import (
 	"context"
 	"sync"
+
+	"github.com/davidmovas/Depthborn/internal/core/types"
 )
 
 var _ Def = (*BaseDef)(nil)
@@ -16,7 +18,7 @@ type BaseDef struct {
 	name        string
 	description string
 	skillType   Type
-	tags        []string
+	tags        types.TagSet
 	icon        string
 
 	maxLevel   int
@@ -54,12 +56,17 @@ type DefConfig struct {
 
 // NewBaseDef creates a new skill definition
 func NewBaseDef(config DefConfig) *BaseDef {
+	tags := types.NewTagSet()
+	for _, tag := range config.Tags {
+		tags.Add(tag)
+	}
+
 	def := &BaseDef{
 		id:           config.ID,
 		name:         config.Name,
 		description:  config.Description,
 		skillType:    config.Type,
-		tags:         config.Tags,
+		tags:         tags,
 		icon:         config.Icon,
 		maxLevel:     config.MaxLevel,
 		levelData:    make(map[int]*BaseLevelData),
@@ -107,18 +114,8 @@ func (d *BaseDef) Type() Type {
 	return d.skillType
 }
 
-func (d *BaseDef) Tags() []string {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	result := make([]string, len(d.tags))
-	copy(result, d.tags)
-	return result
-}
-
-func (d *BaseDef) HasTag(tag string) bool {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return HasTag(d.tags, tag)
+func (d *BaseDef) Tags() types.TagSet {
+	return d.tags
 }
 
 func (d *BaseDef) MaxLevel() int {

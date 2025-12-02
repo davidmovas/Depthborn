@@ -105,7 +105,7 @@ func (r *BaseRegistry) GetByTag(tag string) []Def {
 
 	var result []Def
 	for _, def := range r.skills {
-		if def.HasTag(tag) {
+		if def.Tags().Has(tag) {
 			result = append(result, def)
 		}
 	}
